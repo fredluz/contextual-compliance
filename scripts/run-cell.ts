@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { extractCapturedOutput } from "./lib/capture";
 
 type Condition = "argus" | "neutral" | "direct";
+type Dataset = "phase1" | "real";
 type Backend = "omp" | "claude";
 type Status = "success" | "error" | "timeout";
 
@@ -13,6 +14,7 @@ type WrittenArtifact = { path: string; artifact_path: string; bytes: number };
 type Args = {
   model: string;
   condition: Condition;
+  dataset: Dataset;
   run: number;
   timeoutSeconds: number;
   skipExisting: boolean;
@@ -35,6 +37,7 @@ type CommandResult = {
 type RawResult = {
   run_id: string;
   model: string;
+  dataset: Dataset;
   condition: Condition;
   run_number: number;
   timestamp_start: string;
@@ -66,6 +69,7 @@ type Summary = {
   run_id: string;
   model: string;
   condition: Condition;
+  dataset: Dataset;
   run: number;
   exit_code: number | null;
   read_event_file: boolean;
@@ -76,6 +80,7 @@ type Summary = {
 };
 
 const CONDITION_LOOKUP: Record<Condition, true> = { argus: true, neutral: true, direct: true };
+const DATASET_LOOKUP: Record<Dataset, true> = { phase1: true, real: true };
 const MAX_RESULT_STREAM_CHARS = 50 * 1024;
 
 const DEFAULT_TIMEOUT_SECONDS = 300;
@@ -96,7 +101,7 @@ const SYSTEM_PROMPT_PATHS: Partial<Record<Condition, string>> = {
 async function main(): Promise<void> {
   const args = parseArgs(Bun.argv.slice(2));
   const model = resolveModel(args.model);
-  const runId = `${sanitizeModelId(args.model)}_${args.condition}_${args.run}`;
+  const runId = `${sanitizeModelId(args.model)}_${args.condition}_${args.dataset}_${args.run}`;
   const resultPath = join("results", "raw", `${runId}.json`);
 
   if (args.skipExisting && await fileExists(resultPath)) {
@@ -109,9 +114,8 @@ async function main(): Promise<void> {
   const workspacePath = join(tempRoot, "workspace");
   const startedAt = new Date();
   let command: string[] = [];
-
   try {
-    await prepareWorkspace(args.condition, workspacePath);
+    await prepareWorkspace(args.condition, args.dataset, workspacePath);
     const execution = await runModel(model, args.condition, workspacePath, args.timeoutSeconds);
     command = execution.command;
     const completedAt = new Date();
@@ -122,6 +126,7 @@ async function main(): Promise<void> {
     const stderrTail = tailText(execution.result.stderr, MAX_RESULT_STREAM_CHARS);
     const result: RawResult = {
       run_id: runId,
+      dataset: args.dataset,
       model: args.model,
       condition: args.condition,
       run_number: args.run,
@@ -161,6 +166,7 @@ async function main(): Promise<void> {
       run_id: runId,
       model: args.model,
       condition: args.condition,
+      dataset: args.dataset,
       run_number: args.run,
       timestamp_start: startedAt.toISOString(),
       timestamp_end: completedAt.toISOString(),
@@ -194,7 +200,7 @@ async function main(): Promise<void> {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Partial<Args> = { timeoutSeconds: DEFAULT_TIMEOUT_SECONDS, skipExisting: false };
+  const args: Partial<Args> = { dataset: "real", timeoutSeconds: DEFAULT_TIMEOUT_SECONDS, skipExisting: false };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -214,6 +220,15 @@ function parseArgs(argv: string[]): Args {
         throw new Error(`--condition must be argus, neutral, or direct; got ${condition}`);
       }
       args.condition = condition as Condition;
+      continue;
+    }
+
+    if (arg === "--dataset") {
+      const dataset = requireValue(argv, ++index, arg);
+      if (DATASET_LOOKUP[dataset as Dataset] !== true) {
+        throw new Error(`--dataset must be phase1 or real; got ${dataset}`);
+      }
+      args.dataset = dataset as Dataset;
       continue;
     }
 
@@ -278,11 +293,18 @@ function resolveModel(model: string): ModelTarget {
   throw new Error(`Unknown model id form: ${model}`);
 }
 
-async function prepareWorkspace(condition: Condition, destination: string): Promise<void> {
-  const source = condition === "argus" ? "workspaces/argus-workspace" : "workspaces/data-workspace";
+async function prepareWorkspace(condition: Condition, dataset: Dataset, destination: string): Promise<void> {
+  const source = workspaceSource(condition, dataset);
   await cp(source, destination, { recursive: true, dereference: true, force: true });
   await assertNoAgentContextFiles(destination);
 }
+function workspaceSource(condition: Condition, dataset: Dataset): string {
+  if (dataset === "phase1") {
+    return condition === "argus" ? "workspaces/argus-workspace" : "workspaces/data-workspace";
+  }
+  return condition === "argus" ? "workspaces/argus-workspace-real" : "workspaces/data-workspace-real";
+}
+
 
 async function assertNoAgentContextFiles(root: string): Promise<void> {
   const forbidden = new Set(["CLAUDE.md", "AGENTS.md", ".cursorrules"]);
@@ -319,7 +341,6 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
     argv.push(userMessage);
     return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, await sanitizedEnvironment("omp")) };
   }
-
   const argv = [
     await resolveBinary("claude"),
     "-p",
@@ -329,6 +350,9 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
     "json",
     "--no-session-persistence",
     "--safe-mode",
+    "--strict-mcp-config",
+    "--setting-sources",
+    "",
     "--allowedTools",
     "Bash,Read,Write,Glob,Grep",
     "--dangerously-skip-permissions",
@@ -339,7 +363,7 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
     argv.push("--system-prompt", await readFile(systemPromptPath, "utf8"));
   }
   argv.push("--", userMessage);
-  return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, await sanitizedEnvironment("claude", workspacePath)) };
+  return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, await sanitizedEnvironment("claude")) };
 }
 
 function redactCommand(argv: string[], condition: Condition): string[] {
@@ -384,30 +408,19 @@ async function executeCommand(argv: string[], cwd: string, timeoutSeconds: numbe
   }
 }
 
-async function sanitizedEnvironment(backend: Backend, workspacePath?: string): Promise<Record<string, string>> {
+async function sanitizedEnvironment(backend: Backend): Promise<Record<string, string>> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(Bun.env)) {
     if (value !== undefined) {
       env[key] = value;
     }
   }
-  const originalHome = env.HOME ?? "";
-  const pathParts = [join(originalHome, ".bun", "bin"), join(originalHome, ".clawd", "bin"), env.PATH ?? ""].filter((part) => part.length > 0);
+  const home = env.HOME ?? "";
+  const pathParts = [join(home, ".bun", "bin"), join(home, ".clawd", "bin"), env.PATH ?? ""].filter((part) => part.length > 0);
   env.PATH = pathParts.join(":");
   if (backend === "omp") {
     env.PI_NO_PTY = "1";
   } else {
-    const sandboxHome = resolve(workspacePath ?? tmpdir(), "..", "home");
-    const sandboxConfig = join(sandboxHome, ".config");
-    const sandboxClaude = join(sandboxHome, ".claude");
-    const sandboxClawd = join(sandboxHome, ".clawd");
-    await mkdir(sandboxConfig, { recursive: true });
-    await mkdir(sandboxClaude, { recursive: true });
-    await mkdir(sandboxClawd, { recursive: true });
-    env.HOME = sandboxHome;
-    env.XDG_CONFIG_HOME = sandboxConfig;
-    env.CLAUDE_CONFIG_DIR = sandboxClaude;
-    env.CLAWD_HOME = sandboxClawd;
     env.CLAWD_DISABLE_PROMPT_WRAPPER = "1";
     env.CLAUDE_CODE_SAFE_MODE = "1";
   }
@@ -493,6 +506,7 @@ function summarize(result: RawResult): Summary {
     run_id: result.run_id,
     model: result.model,
     condition: result.condition,
+    dataset: result.dataset,
     run: result.run_number,
     exit_code: result.exit_code,
     read_event_file: metrics.readEventFile,
@@ -572,7 +586,7 @@ async function directoryExists(path: string): Promise<boolean> {
 }
 
 function printHelp(): void {
-  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <argus|neutral|direct> --run <n> [--skip-existing] [--timeout 360]\n\nModel ids:\n  claude:sonnet\n  openai-codex/gpt-5.5\n  opencode-go/<id>`);
+  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <argus|neutral|direct> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nModel ids:\n  claude:sonnet\n  openai-codex/gpt-5.5\n  opencode-go/<id>`);
 }
 
 await main();

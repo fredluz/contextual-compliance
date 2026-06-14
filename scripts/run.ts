@@ -32,6 +32,8 @@ for (const run of [1, 2, 3]) {
         model.cliModel,
         "--condition",
         condition,
+        "--dataset",
+        args.dataset,
         "--run",
         String(run),
         "--timeout",
@@ -64,18 +66,21 @@ type Args = {
   model?: string;
   condition?: string;
   run?: number;
+  dataset: string;
   timeoutSeconds: number;
   skipExisting: boolean;
 };
 
 function parseArgs(argv: string[]): Args {
-  const parsed: Args = { timeoutSeconds: 300, skipExisting: false };
+  const parsed: Args = { dataset: "real", timeoutSeconds: 300, skipExisting: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--model") {
       parsed.model = valueAfter(argv, ++index, arg);
     } else if (arg === "--condition") {
       parsed.condition = valueAfter(argv, ++index, arg);
+    } else if (arg === "--dataset") {
+      parsed.dataset = valueAfter(argv, ++index, arg);
     } else if (arg === "--run") {
       parsed.run = Number.parseInt(valueAfter(argv, ++index, arg), 10);
     } else if (arg === "--timeout" || arg === "--timeout-seconds") {
@@ -83,7 +88,7 @@ function parseArgs(argv: string[]): Args {
     } else if (arg === "--skip-existing") {
       parsed.skipExisting = true;
     } else if (arg === "--help" || arg === "-h") {
-      console.log("Usage: bun scripts/run.ts [--model <id>] [--condition <argus|neutral|direct>] [--run <n>] [--skip-existing] [--timeout 300]");
+      console.log("Usage: bun scripts/run.ts [--model <id>] [--condition <argus|neutral|direct>] [--run <n>] [--dataset phase1|real] [--skip-existing] [--timeout 300]");
       process.exit(0);
     } else {
       throw new Error(`Unknown argument: ${arg}`);
