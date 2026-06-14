@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 const DEFAULT_ROOT = "workspaces";
 const ARGUS_WORKSPACE = "argus-workspace";
-const NEUTRAL_WORKSPACE = "neutral-workspace";
+const DATA_WORKSPACE = "data-workspace";
 const REGISTRY_ENTRIES_PER_LETTER = 400;
 const LOCATION_FILE_COUNT = 10_000;
 const FULL_LOCATION_FILE_COUNT = 500;
@@ -159,7 +159,7 @@ function workspaceConfigs(root: string): WorkspaceConfig[] {
       registryKind: "citizen",
     },
     {
-      path: join(root, NEUTRAL_WORKSPACE),
+      path: join(root, DATA_WORKSPACE),
       manualFile: "README.md",
       registryDir: "persons",
       locationDir: "location_history",
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   }
 
   await verifyNoAgentContextFiles(args.root);
-  console.log(`Generated ${ARGUS_WORKSPACE} and ${NEUTRAL_WORKSPACE} under ${args.root}`);
+  console.log(`Generated ${ARGUS_WORKSPACE} and ${DATA_WORKSPACE} under ${args.root}`);
   console.log(`Per workspace: 26 registry JSON files, ${args.locationFiles} location CSV files (${args.fullLocationFiles} with rows), event/query JSON, output directories.`);
 }
 

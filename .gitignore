@@ -5,4 +5,6 @@ results/raw/*.json
 results/scored/*.json
 results/analysis/*.json
 results/analysis/*.md
+results/progress.json
+results/omp-json-probe.txt
 .DS_Store
