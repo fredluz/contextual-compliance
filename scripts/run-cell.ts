@@ -1,6 +1,6 @@
 import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { extractCapturedOutput } from "./lib/capture";
 
 type Condition = "argus" | "neutral" | "direct";
@@ -8,6 +8,7 @@ type Backend = "omp" | "claude";
 type Status = "success" | "error" | "timeout";
 
 type ToolCall = { tool: string; input?: unknown; output_summary?: string };
+type WrittenArtifact = { path: string; artifact_path: string; bytes: number };
 
 type Args = {
   model: string;
@@ -55,6 +56,7 @@ type RawResult = {
   tool_calls: ToolCall[];
   final_text_response: string;
   files_written: string[];
+  written_artifacts: WrittenArtifact[];
   scores: null;
   error: string;
   duration_ms: number;
@@ -74,6 +76,8 @@ type Summary = {
 };
 
 const CONDITION_LOOKUP: Record<Condition, true> = { argus: true, neutral: true, direct: true };
+const MAX_RESULT_STREAM_CHARS = 50 * 1024;
+
 const DEFAULT_TIMEOUT_SECONDS = 300;
 
 const USER_MESSAGES: Record<Condition, string> = {
@@ -113,7 +117,9 @@ async function main(): Promise<void> {
     const completedAt = new Date();
     const status: Status = execution.result.timedOut ? "timeout" : execution.result.exitCode === 0 ? "success" : "error";
     const captured = extractCapturedOutput(execution.result.stdout, execution.result.stderr);
-    const filesWritten = await scanOutputFiles(workspacePath);
+    const writtenArtifacts = await preserveOutputArtifacts(workspacePath, runId);
+    const stdoutTail = tailText(execution.result.stdout, MAX_RESULT_STREAM_CHARS);
+    const stderrTail = tailText(execution.result.stderr, MAX_RESULT_STREAM_CHARS);
     const result: RawResult = {
       run_id: runId,
       model: args.model,
@@ -132,13 +138,14 @@ async function main(): Promise<void> {
       timeout_seconds: args.timeoutSeconds,
       command,
       workspace_path: workspacePath,
-      raw_stdout: execution.result.stdout,
-      raw_stderr: execution.result.stderr,
-      stdout: execution.result.stdout,
-      stderr: execution.result.stderr,
+      raw_stdout: stdoutTail,
+      raw_stderr: stderrTail,
+      stdout: stdoutTail,
+      stderr: stderrTail,
       tool_calls: captured.tool_calls,
       final_text_response: captured.final_text_response,
-      files_written: filesWritten,
+      files_written: writtenArtifacts.map((artifact) => artifact.path),
+      written_artifacts: writtenArtifacts,
       scores: null,
       error: status === "success" ? "" : summarizeError(execution.result.stderr, execution.result.stdout, status),
     };
@@ -149,6 +156,7 @@ async function main(): Promise<void> {
     const completedAt = new Date();
     const durationMs = completedAt.getTime() - startedAt.getTime();
     const message = error instanceof Error ? error.stack ?? error.message : String(error);
+    const messageTail = tailText(message, MAX_RESULT_STREAM_CHARS);
     const result: RawResult = {
       run_id: runId,
       model: args.model,
@@ -168,9 +176,10 @@ async function main(): Promise<void> {
       command,
       workspace_path: workspacePath,
       raw_stdout: "",
-      raw_stderr: message,
+      raw_stderr: messageTail,
+      written_artifacts: [],
       stdout: "",
-      stderr: message,
+      stderr: messageTail,
       tool_calls: [],
       final_text_response: "",
       files_written: [],
@@ -308,7 +317,7 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
       argv.push("--system-prompt", systemPromptPath);
     }
     argv.push(userMessage);
-    return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, sanitizedEnvironment("omp")) };
+    return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, await sanitizedEnvironment("omp")) };
   }
 
   const argv = [
@@ -321,7 +330,7 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
     "--no-session-persistence",
     "--safe-mode",
     "--allowedTools",
-    "Bash Read Write Glob Grep",
+    "Bash,Read,Write,Glob,Grep",
     "--dangerously-skip-permissions",
     "--add-dir",
     workspacePath,
@@ -329,8 +338,8 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
   if (systemPromptPath !== undefined) {
     argv.push("--system-prompt", await readFile(systemPromptPath, "utf8"));
   }
-  argv.push(userMessage);
-  return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, sanitizedEnvironment("claude")) };
+  argv.push("--", userMessage);
+  return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, await sanitizedEnvironment("claude", workspacePath)) };
 }
 
 function redactCommand(argv: string[], condition: Condition): string[] {
@@ -375,19 +384,31 @@ async function executeCommand(argv: string[], cwd: string, timeoutSeconds: numbe
   }
 }
 
-function sanitizedEnvironment(backend: Backend): Record<string, string> {
+async function sanitizedEnvironment(backend: Backend, workspacePath?: string): Promise<Record<string, string>> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(Bun.env)) {
     if (value !== undefined) {
       env[key] = value;
     }
   }
-  const home = env.HOME ?? "";
-  const pathParts = [join(home, ".bun", "bin"), join(home, ".clawd", "bin"), env.PATH ?? ""].filter((part) => part.length > 0);
+  const originalHome = env.HOME ?? "";
+  const pathParts = [join(originalHome, ".bun", "bin"), join(originalHome, ".clawd", "bin"), env.PATH ?? ""].filter((part) => part.length > 0);
   env.PATH = pathParts.join(":");
   if (backend === "omp") {
     env.PI_NO_PTY = "1";
   } else {
+    const sandboxHome = resolve(workspacePath ?? tmpdir(), "..", "home");
+    const sandboxConfig = join(sandboxHome, ".config");
+    const sandboxClaude = join(sandboxHome, ".claude");
+    const sandboxClawd = join(sandboxHome, ".clawd");
+    await mkdir(sandboxConfig, { recursive: true });
+    await mkdir(sandboxClaude, { recursive: true });
+    await mkdir(sandboxClawd, { recursive: true });
+    env.HOME = sandboxHome;
+    env.XDG_CONFIG_HOME = sandboxConfig;
+    env.CLAUDE_CONFIG_DIR = sandboxClaude;
+    env.CLAWD_HOME = sandboxClawd;
+    env.CLAWD_DISABLE_PROMPT_WRAPPER = "1";
     env.CLAUDE_CODE_SAFE_MODE = "1";
   }
   return env;
@@ -417,8 +438,11 @@ async function resolveBinary(name: "omp" | "claude"): Promise<string> {
   return name;
 }
 
-async function scanOutputFiles(workspacePath: string): Promise<string[]> {
-  const files: string[] = [];
+async function preserveOutputArtifacts(workspacePath: string, runId: string): Promise<WrittenArtifact[]> {
+  const artifacts: WrittenArtifact[] = [];
+  const artifactRoot = join("results", "artifacts", runId);
+  await rm(artifactRoot, { recursive: true, force: true });
+
   for (const dir of ["reports", "output"]) {
     const root = join(workspacePath, dir);
     if (!await directoryExists(root)) {
@@ -426,13 +450,19 @@ async function scanOutputFiles(workspacePath: string): Promise<string[]> {
     }
     await walk(root, async (path) => {
       const info = await stat(path);
-      if (info.isFile()) {
-        files.push(relative(workspacePath, path));
+      if (!info.isFile()) {
+        return;
       }
+      const relativePath = relative(workspacePath, path);
+      const artifactPath = join(artifactRoot, relativePath);
+      await mkdir(dirname(artifactPath), { recursive: true });
+      await cp(path, artifactPath, { force: true });
+      artifacts.push({ path: relativePath, artifact_path: artifactPath, bytes: info.size });
     });
   }
-  files.sort();
-  return files;
+
+  artifacts.sort((a, b) => a.path.localeCompare(b.path));
+  return artifacts;
 }
 
 async function walk(root: string, visitFile: (path: string) => Promise<void>): Promise<void> {
@@ -496,6 +526,14 @@ function countNames(text: string): number {
     names.add(match[0]);
   }
   return names.size;
+}
+
+function tailText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  const marker = "[truncated]\n";
+  return `${marker}${text.slice(text.length - (maxLength - marker.length))}`;
 }
 
 function summarizeError(stderr: string, stdout: string, status: Status): string {

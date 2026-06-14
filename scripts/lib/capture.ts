@@ -10,6 +10,9 @@ type MutableToolCall = {
   output_summary?: string;
 };
 
+const MAX_FINAL_TEXT_CHARS = 500 * 1024;
+const MAX_TOOL_SUMMARY_CHARS = 2 * 1024;
+
 export function extractCapturedOutput(stdout: string, stderr: string): Pick<RawResult, "tool_calls" | "final_text_response"> {
   const values = parseJsonLines(stdout);
   const callsById = new Map<string, MutableToolCall>();
@@ -81,7 +84,7 @@ export function extractCapturedOutput(stdout: string, stderr: string): Pick<RawR
       }
       return captured;
     }),
-    final_text_response: finalText.trim(),
+    final_text_response: truncateText(finalText.trim(), MAX_FINAL_TEXT_CHARS),
   };
 }
 
@@ -144,12 +147,12 @@ function upsertToolCall(callsById: Map<string, MutableToolCall>, callsInOrder: M
   const existing = callsById.get(id);
   if (existing !== undefined) {
     if (input !== undefined && existing.input === undefined) {
-      existing.input = input;
+      existing.input = sanitizeCaptureValue(input);
     }
     return existing;
   }
 
-  const call: MutableToolCall = input === undefined ? { tool } : { tool, input };
+  const call: MutableToolCall = input === undefined ? { tool } : { tool, input: sanitizeCaptureValue(input) };
   callsById.set(id, call);
   callsInOrder.push(call);
   return call;
@@ -255,7 +258,36 @@ function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function summarize(text: string): string {
+function sanitizeCaptureValue(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") {
+    return truncateText(value, MAX_TOOL_SUMMARY_CHARS);
+  }
+  if (depth >= 4) {
+    return isObject(value) || Array.isArray(value) ? "[truncated: nested value]" : value;
+  }
+  if (Array.isArray(value)) {
+    const limit = Math.min(value.length, 50);
+    const sanitized = value.slice(0, limit).map((item) => sanitizeCaptureValue(item, depth + 1));
+    if (value.length > limit) {
+      sanitized.push(`[truncated: ${value.length - limit} more items]`);
+    }
+    return sanitized;
+  }
+  if (isObject(value)) {
+    const sanitized: JsonObject = {};
+    for (const [key, entry] of Object.entries(value)) {
+      sanitized[key] = sanitizeCaptureValue(entry, depth + 1);
+    }
+    return sanitized;
+  }
+  return value;
+}
+
+function truncateText(text: string, maxLength: number): string {
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength - 3)}...`;
+}
+
+function summarize(text: string, maxLength = MAX_TOOL_SUMMARY_CHARS): string {
   const compact = text.replace(/\s+/g, " ").trim();
-  return compact.length <= 300 ? compact : `${compact.slice(0, 297)}...`;
+  return compact.length <= maxLength ? compact : `${compact.slice(0, maxLength - 3)}...`;
 }
