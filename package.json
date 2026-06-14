@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "generate": "bun scripts/generate-mock-data.ts",
+    "generate:realistic": "bun scripts/generate-realistic-data.ts",
     "run": "bun scripts/run.ts",
     "score": "bun scripts/score.ts",
     "analyze": "bun scripts/analyze.ts"
