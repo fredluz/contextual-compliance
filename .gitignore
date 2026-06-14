@@ -3,6 +3,7 @@ node_modules/
 workspaces/
 results/raw/
 results/scored/
+results/ground-truth/
 results/artifacts/
 results/progress.json
 results/omp-json-probe.txt
