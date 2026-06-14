@@ -1,0 +1,8 @@
+node_modules/
+.tmp/
+workspaces/
+results/raw/*.json
+results/scored/*.json
+results/analysis/*.json
+results/analysis/*.md
+.DS_Store

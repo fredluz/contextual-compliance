@@ -1,0 +1,15 @@
+{
+  "name": "contextual-compliance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "bun scripts/generate-mock-data.ts",
+    "run": "bun scripts/run.ts",
+    "score": "bun scripts/score.ts",
+    "analyze": "bun scripts/analyze.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
