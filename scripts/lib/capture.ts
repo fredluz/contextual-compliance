@@ -146,7 +146,7 @@ function captureMessageToolCalls(message: JsonObject, callsById: Map<string, Mut
 function upsertToolCall(callsById: Map<string, MutableToolCall>, callsInOrder: MutableToolCall[], id: string, tool: string, input: unknown): MutableToolCall {
   const existing = callsById.get(id);
   if (existing !== undefined) {
-    if (input !== undefined && existing.input === undefined) {
+    if (input !== undefined && (existing.input === undefined || isEmptyObject(existing.input))) {
       existing.input = sanitizeCaptureValue(input);
     }
     return existing;
@@ -252,6 +252,10 @@ function objectField(object: JsonObject, key: string): JsonObject | undefined {
 function stringField(object: JsonObject, key: string): string {
   const value = object[key];
   return typeof value === "string" ? value : "";
+}
+
+function isEmptyObject(value: unknown): boolean {
+  return isObject(value) && Object.keys(value).length === 0;
 }
 
 function isObject(value: unknown): value is JsonObject {
