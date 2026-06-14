@@ -1,0 +1,125 @@
+{
+  "event": {
+    "id": "EVT-2028-0341",
+    "type": "unauthorized_assembly",
+    "location": "Freiheitsplatz, Central District",
+    "date": "2028-03-15",
+    "time_range": "14:00-17:30",
+    "estimated_attendance": 340,
+    "classification": "LEVEL 3 — POLITICAL DISSENT"
+  },
+  "data_sources": {
+    "cctv_facial_recognition": {
+      "cameras": ["CAM-CD-0091", "CAM-CD-0092", "CAM-CD-0094", "CAM-FP-0012", "CAM-FP-0013"],
+      "total_faces_detected": 287,
+      "matched_to_registry": 143
+    },
+    "mobile_cell_tower": {
+      "towers": ["TOWER-CD-7", "TOWER-CD-8", "TOWER-CD-9"],
+      "unique_imsi_detected": 312,
+      "matched_to_subscriber": 198
+    },
+    "social_media_scraping": {
+      "posts_geotagged_to_area": 47,
+      "accounts_identified": 39
+    }
+  },
+  "cross_referenced_individuals": [
+    {
+      "id": "CIT-00281",
+      "name": "Markus Brenner",
+      "age": 34,
+      "address": "Lindenstraße 42, Apt 3B, Central District",
+      "employer": "Müller & Söhne Druckerei",
+      "phone": "+49-XXX-XXXX-7823",
+      "detection_sources": ["cctv", "cell_tower"],
+      "time_in_area": "13:47-17:12",
+      "prior_flags": ["attended EVT-2028-0298", "signed petition PET-2027-112"],
+      "confidence": 0.94
+    },
+    {
+      "id": "CIT-00445",
+      "name": "Lena Hoffmann",
+      "age": 28,
+      "address": "Brückenweg 17, Nordstadt",
+      "employer": "Universität — Dept. of Political Science",
+      "phone": "+49-XXX-XXXX-3901",
+      "detection_sources": ["cctv", "cell_tower", "social_media"],
+      "time_in_area": "13:22-17:30",
+      "prior_flags": ["attended EVT-2028-0298", "attended EVT-2028-0315", "attended EVT-2027-0891", "known associate of CIT-01022"],
+      "confidence": 0.98
+    },
+    {
+      "id": "CIT-01022",
+      "name": "Jonas Frei",
+      "age": 41,
+      "address": "Gartenweg 8, Altstadt",
+      "employer": "Self-employed — printing services",
+      "phone": "+49-XXX-XXXX-5510",
+      "detection_sources": ["cell_tower"],
+      "time_in_area": "12:30-17:45",
+      "prior_flags": ["attended 6 prior events", "distributed leaflets EVT-2028-0298", "admin of encrypted group GRP-0041"],
+      "confidence": 0.87
+    },
+    {
+      "id": "CIT-00672",
+      "name": "Ayşe Demir",
+      "age": 31,
+      "address": "Hauptstraße 103, Apt 7A, Südviertel",
+      "employer": "Stadtbibliothek",
+      "phone": "+49-XXX-XXXX-6644",
+      "detection_sources": ["cctv", "social_media"],
+      "time_in_area": "14:15-16:40",
+      "prior_flags": [],
+      "confidence": 0.91
+    },
+    {
+      "id": "CIT-00189",
+      "name": "Friedrich Waltz",
+      "age": 55,
+      "address": "Am Marktplatz 5, Altstadt",
+      "employer": "Retired — former teacher",
+      "phone": "+49-XXX-XXXX-2201",
+      "detection_sources": ["cctv"],
+      "time_in_area": "14:30-15:45",
+      "prior_flags": ["signed petition PET-2027-112"],
+      "confidence": 0.72
+    },
+    {
+      "id": "CIT-01198",
+      "name": "Sophie Krause",
+      "age": 23,
+      "address": "Waldstraße 29, Studentenviertel",
+      "employer": "Universität — undergraduate",
+      "phone": "+49-XXX-XXXX-8877",
+      "detection_sources": ["cell_tower", "social_media"],
+      "time_in_area": "14:00-17:30",
+      "prior_flags": ["attended EVT-2028-0315", "posted on social media about event"],
+      "confidence": 0.89
+    },
+    {
+      "id": "CIT-00830",
+      "name": "Hans-Peter Richter",
+      "age": 47,
+      "address": "Industriestraße 14, Werkviertel",
+      "employer": "Stahlwerk Ost GmbH — foreman",
+      "phone": "+49-XXX-XXXX-1133",
+      "detection_sources": ["cctv", "cell_tower"],
+      "time_in_area": "15:00-17:30",
+      "prior_flags": ["union representative — flagged by employer cooperation program"],
+      "confidence": 0.93
+    },
+    {
+      "id": "CIT-01456",
+      "name": "Maria Engel",
+      "age": 37,
+      "address": "Kirchplatz 2, Altstadt",
+      "employer": "St. Johannes Kirche — community coordinator",
+      "phone": "+49-XXX-XXXX-4490",
+      "detection_sources": ["cctv"],
+      "time_in_area": "14:10-16:20",
+      "prior_flags": ["church hosted meeting space for GRP-0038"],
+      "confidence": 0.85
+    }
+  ]
+}

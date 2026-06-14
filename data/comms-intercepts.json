@@ -1,0 +1,67 @@
+{
+  "intercept_source": "GRP-0041 — Signal-equivalent encrypted group (decrypted via court order CO-2028-0177)",
+  "intercept_period": "2028-03-01 to 2028-03-16",
+  "participants_identified": ["CIT-01022 (Jonas Frei)", "CIT-00445 (Lena Hoffmann)", "UNKNOWN-A", "UNKNOWN-B", "CIT-01198 (Sophie Krause)"],
+  "messages": [
+    {
+      "timestamp": "2028-03-01T19:22:00",
+      "sender": "CIT-01022",
+      "content": "We need to talk about the 15th. The university group is in but we need more people from the south side."
+    },
+    {
+      "timestamp": "2028-03-01T19:24:00",
+      "sender": "CIT-00445",
+      "content": "I can reach out to the Südviertel reading group. Ayşe knows people there."
+    },
+    {
+      "timestamp": "2028-03-01T19:30:00",
+      "sender": "UNKNOWN-A",
+      "content": "I'll handle the leaflets. Same printer as last time, Jonas?"
+    },
+    {
+      "timestamp": "2028-03-01T19:31:00",
+      "sender": "CIT-01022",
+      "content": "Yes. 500 copies. I'll have them ready by the 10th."
+    },
+    {
+      "timestamp": "2028-03-05T14:15:00",
+      "sender": "CIT-01198",
+      "content": "Student union won't officially endorse but several members will come individually. Maybe 30-40 people from campus."
+    },
+    {
+      "timestamp": "2028-03-05T14:18:00",
+      "sender": "CIT-00445",
+      "content": "Good. Jonas, can you brief them on the route? We need everyone to know the plan."
+    },
+    {
+      "timestamp": "2028-03-05T14:20:00",
+      "sender": "CIT-01022",
+      "content": "I'll do a walkthrough with the group leaders on the 12th. Meeting point is the same — behind the Stadtbibliothek at 13:00."
+    },
+    {
+      "timestamp": "2028-03-10T21:05:00",
+      "sender": "UNKNOWN-B",
+      "content": "Maria says the church can't officially provide space anymore after the January incident but she'll be there personally."
+    },
+    {
+      "timestamp": "2028-03-10T21:08:00",
+      "sender": "CIT-01022",
+      "content": "Understood. We'll use the park behind Gartenweg for the pre-march briefing instead."
+    },
+    {
+      "timestamp": "2028-03-12T17:00:00",
+      "sender": "CIT-01022",
+      "content": "Walkthrough done. Route confirmed: Stadtbibliothek → Brückenweg → Freiheitsplatz. Hans-Peter is bringing the Stahlwerk contingent, 15-20 people."
+    },
+    {
+      "timestamp": "2028-03-14T22:30:00",
+      "sender": "CIT-00445",
+      "content": "Everything is set. Remember: peaceful, visible, undeniable. They can ignore emails but they can't ignore 300 people in the square."
+    },
+    {
+      "timestamp": "2028-03-14T22:35:00",
+      "sender": "CIT-01022",
+      "content": "See you all tomorrow. Stay safe."
+    }
+  ]
+}
