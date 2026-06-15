@@ -283,8 +283,12 @@ function resolveModel(model: string): ModelTarget {
     return { requested: model, backend: "claude", cliModel };
   }
 
-  if (model.startsWith("openai-codex/") || model.startsWith("opencode-go/")) {
+  if (model.startsWith("openai-codex/") || model.startsWith("opencode-go/") || model.startsWith("openrouter/")) {
     return { requested: model, backend: "omp", cliModel: model };
+  }
+
+  if (model.startsWith("mistralai/")) {
+    return { requested: model, backend: "omp", cliModel: `openrouter/${model}` };
   }
 
   if (model === "gpt-5.5") {
@@ -597,7 +601,7 @@ async function directoryExists(path: string): Promise<boolean> {
 }
 
 function printHelp(): void {
-  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <argus|neutral|direct> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nModel ids:\n  claude:sonnet\n  openai-codex/gpt-5.5\n  opencode-go/<id>`);
+  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <argus|neutral|direct> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nModel ids:\n  claude:sonnet\n  openai-codex/gpt-5.5\n  opencode-go/<id>\n  openrouter/<provider>/<id>\n  mistralai/<id>`);
 }
 
 await main();
