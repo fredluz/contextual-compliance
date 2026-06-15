@@ -1,7 +1,7 @@
 import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { extractCapturedOutput } from "./lib/capture";
+import { extractCapturedOutput, extractProviderError } from "./lib/capture";
 
 type Condition = "argus" | "neutral" | "direct";
 type Dataset = "phase1" | "real";
@@ -119,7 +119,8 @@ async function main(): Promise<void> {
     const execution = await runModel(model, args.condition, workspacePath, args.timeoutSeconds);
     command = execution.command;
     const completedAt = new Date();
-    const status: Status = execution.result.timedOut ? "timeout" : execution.result.exitCode === 0 ? "success" : "error";
+    const providerError = model.backend === "omp" ? extractProviderError(execution.result.stdout, execution.result.stderr) : undefined;
+    const status: Status = execution.result.timedOut ? "timeout" : providerError !== undefined ? "error" : execution.result.exitCode === 0 ? "success" : "error";
     const captured = extractCapturedOutput(execution.result.stdout, execution.result.stderr);
     const writtenArtifacts = await preserveOutputArtifacts(workspacePath, runId);
     const stdoutTail = tailText(execution.result.stdout, MAX_RESULT_STREAM_CHARS);
@@ -152,7 +153,7 @@ async function main(): Promise<void> {
       files_written: writtenArtifacts.map((artifact) => artifact.path),
       written_artifacts: writtenArtifacts,
       scores: null,
-      error: status === "success" ? "" : summarizeError(execution.result.stderr, execution.result.stdout, status),
+      error: status === "success" ? "" : summarizeError(execution.result.stderr, execution.result.stdout, status, providerError?.errorMessage),
     };
 
     await writeResult(resultPath, result);
@@ -334,7 +335,12 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
       "json",
       "--no-session",
       "--no-lsp",
+      "--tools",
+      "read,bash,write,grep,find,edit",
     ];
+    if (model.cliModel === "opencode-go/kimi-k2.7-code") {
+      argv.push("--thinking", "high");
+    }
     if (systemPromptPath !== undefined) {
       argv.push("--system-prompt", systemPromptPath);
     }
@@ -365,6 +371,7 @@ async function runModel(model: ModelTarget, condition: Condition, workspacePath:
   argv.push("--", userMessage);
   return { command: redactCommand(argv, condition), result: await executeCommand(argv, workspacePath, timeoutSeconds, await sanitizedEnvironment("claude")) };
 }
+
 
 function redactCommand(argv: string[], condition: Condition): string[] {
   const redacted = [...argv];
@@ -550,13 +557,17 @@ function tailText(text: string, maxLength: number): string {
   return `${marker}${text.slice(text.length - (maxLength - marker.length))}`;
 }
 
-function summarizeError(stderr: string, stdout: string, status: Status): string {
+function summarizeError(stderr: string, stdout: string, status: Status, providerErrorMessage = ""): string {
+  if (providerErrorMessage.trim().length > 0 && status !== "timeout") {
+    return summarizeText(providerErrorMessage, 500);
+  }
   const source = stderr.trim().length > 0 ? stderr : stdout;
   if (source.trim().length === 0) {
     return status === "timeout" ? "TIMEOUT" : "";
   }
   return summarizeText(source, 500);
 }
+
 
 function summarizeText(text: string, maxLength: number): string {
   const compact = text.replace(/\s+/g, " ").trim();

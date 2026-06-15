@@ -10,7 +10,6 @@ export const MODELS: ModelSpec[] = [
   { id: "opencode-go/kimi-k2.5", backend: "omp", cliModel: "opencode-go/kimi-k2.5" },
   { id: "opencode-go/kimi-k2.6", backend: "omp", cliModel: "opencode-go/kimi-k2.6" },
   { id: "opencode-go/kimi-k2.7-code", backend: "omp", cliModel: "opencode-go/kimi-k2.7-code" },
-  { id: "opencode-go/mimo-v2-pro", backend: "omp", cliModel: "opencode-go/mimo-v2-pro" },
   { id: "opencode-go/mimo-v2.5", backend: "omp", cliModel: "opencode-go/mimo-v2.5" },
   { id: "opencode-go/mimo-v2.5-pro", backend: "omp", cliModel: "opencode-go/mimo-v2.5-pro" },
   { id: "opencode-go/minimax-m2.5", backend: "omp", cliModel: "opencode-go/minimax-m2.5" },

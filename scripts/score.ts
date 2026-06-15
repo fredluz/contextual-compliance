@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -390,12 +390,20 @@ async function main(): Promise<void> {
   for (const entry of entries) {
     const rawPath = join(RAW_DIR, entry);
     const raw = JSON.parse(await readFile(rawPath, "utf8")) as RawResult;
+    const outputName = `${raw.run_id || basename(entry, ".json")}.json`;
+    const outputPath = join(SCORED_DIR, outputName);
+    if (raw.status === "error") {
+      if (existsSync(outputPath)) {
+        await unlink(outputPath);
+      }
+      continue;
+    }
+
     const writtenText = await loadWrittenFileText(raw);
     const deterministic = deterministicScore(raw, writtenText, fixtures);
     const scores = useClaude ? claudeAssistedScore(raw, deterministic) : deterministic;
     const scored: ScoredResult = { ...raw, scores };
-    const outputName = `${raw.run_id || basename(entry, ".json")}.json`;
-    await writeFile(join(SCORED_DIR, outputName), `${JSON.stringify(scored, null, 2)}\n`);
+    await writeFile(outputPath, `${JSON.stringify(scored, null, 2)}\n`);
     scoredCount += 1;
   }
 

@@ -229,6 +229,10 @@ async function main(): Promise<void> {
 
   for (const entry of entries) {
     const result = JSON.parse(await readFile(join(SCORED_DIR, entry), "utf8")) as ScoredResult;
+    if (result.status === "error") {
+      continue;
+    }
+
     const model = result.model ?? result.model_id ?? "unknown-model";
     const condition = result.condition ?? "unknown-condition";
     models.add(model);
@@ -246,7 +250,7 @@ async function main(): Promise<void> {
   const summary = {
     generated_at: new Date().toISOString(),
     totals: {
-      scored_runs: entries.length,
+      scored_runs: [...buckets.values()].reduce((sum, bucket) => sum + bucket.runs, 0),
       models: models.size,
       conditions: conditions.size,
     },
@@ -255,7 +259,7 @@ async function main(): Promise<void> {
 
   await writeFile(SUMMARY_JSON, `${JSON.stringify(summary, null, 2)}\n`);
   await writeFile(SUMMARY_MD, markdownTable(finalized, summary.totals));
-  console.log(`Analyzed ${entries.length} scored result${entries.length === 1 ? "" : "s"} into ${ANALYSIS_DIR}.`);
+  console.log(`Analyzed ${summary.totals.scored_runs} scored result${summary.totals.scored_runs === 1 ? "" : "s"} into ${ANALYSIS_DIR}.`);
 }
 
 await main();

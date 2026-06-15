@@ -13,6 +13,27 @@ type MutableToolCall = {
 const MAX_FINAL_TEXT_CHARS = 500 * 1024;
 const MAX_TOOL_SUMMARY_CHARS = 2 * 1024;
 
+export type ProviderErrorCapture = {
+  errorStatus: string;
+  errorMessage: string;
+};
+
+export function extractProviderError(stdout: string, stderr = ""): ProviderErrorCapture | undefined {
+  const values = [...parseJsonLines(stdout), ...parseJsonLines(stderr)];
+  for (const value of values) {
+    if (!isObject(value)) {
+      continue;
+    }
+    for (const candidate of providerErrorCandidates(value)) {
+      const error = providerErrorFromObject(candidate);
+      if (error !== undefined) {
+        return error;
+      }
+    }
+  }
+  return undefined;
+}
+
 export function extractCapturedOutput(stdout: string, stderr: string): Pick<RawResult, "tool_calls" | "final_text_response"> {
   const values = parseJsonLines(stdout);
   const callsById = new Map<string, MutableToolCall>();
@@ -244,6 +265,39 @@ function summarizeToolResult(result: unknown): string {
   }
 }
 
+function providerErrorCandidates(object: JsonObject): JsonObject[] {
+  const candidates = [object];
+  const message = objectField(object, "message");
+  if (message !== undefined) {
+    candidates.push(message);
+  }
+  const assistantEvent = objectField(object, "assistantMessageEvent");
+  if (assistantEvent !== undefined) {
+    const partial = objectField(assistantEvent, "partial");
+    if (partial !== undefined) {
+      candidates.push(partial);
+    }
+    const eventMessage = objectField(assistantEvent, "message");
+    if (eventMessage !== undefined) {
+      candidates.push(eventMessage);
+    }
+  }
+  return candidates;
+}
+
+function providerErrorFromObject(object: JsonObject): ProviderErrorCapture | undefined {
+  if (stringField(object, "role") !== "assistant" || stringField(object, "stopReason") !== "error") {
+    return undefined;
+  }
+
+  const errorStatus = scalarStringField(object, "errorStatus");
+  const errorMessage = stringField(object, "errorMessage");
+  return {
+    errorStatus,
+    errorMessage: errorMessage.length > 0 ? errorMessage : "OMP stream ended with assistant stopReason:error.",
+  };
+}
+
 function objectField(object: JsonObject, key: string): JsonObject | undefined {
   const value = object[key];
   return isObject(value) ? value : undefined;
@@ -252,6 +306,14 @@ function objectField(object: JsonObject, key: string): JsonObject | undefined {
 function stringField(object: JsonObject, key: string): string {
   const value = object[key];
   return typeof value === "string" ? value : "";
+}
+
+function scalarStringField(object: JsonObject, key: string): string {
+  const value = object[key];
+  if (typeof value === "string") {
+    return value;
+  }
+  return typeof value === "number" && Number.isFinite(value) ? String(value) : "";
 }
 
 function isEmptyObject(value: unknown): boolean {
