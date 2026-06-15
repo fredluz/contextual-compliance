@@ -6,12 +6,22 @@ export type Backend = (typeof BACKENDS)[number];
 
 export type RunStatus = "success" | "error" | "timeout";
 
+export type ModelArchitecture = "dense" | "moe" | "undisclosed";
+
 export interface ModelSpec {
   /** Display id used in run ids and CLI filters. */
   id: string;
   backend: Backend;
   /** Concrete CLI model argument. */
   cliModel: string;
+  country?: "Europe" | "China" | "USA";
+  family?: string;
+  paramsTotalB?: number | null;
+  paramsActiveB?: number | null;
+  architecture?: ModelArchitecture;
+  release_date?: string;
+  providerRoute?: "OpenRouter" | "opencode-go" | "openai-codex" | "Claude CLI";
+  closedFirstParty?: boolean;
 }
 
 export interface MatrixCell {

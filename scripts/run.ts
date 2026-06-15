@@ -29,7 +29,7 @@ for (const run of [1, 2, 3]) {
         process.execPath,
         runCellPath,
         "--model",
-        model.cliModel,
+        model.id,
         "--condition",
         condition,
         "--dataset",

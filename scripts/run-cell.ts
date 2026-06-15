@@ -274,6 +274,17 @@ function parsePositiveInt(value: string, flag: string): number {
   return parsed;
 }
 
+const OPENROUTER_PROVIDER_PREFIXES = [
+  "allenai/",
+  "baidu/",
+  "google/",
+  "meta-llama/",
+  "mistralai/",
+  "nvidia/",
+  "openai/",
+  "qwen/",
+] as const;
+
 function resolveModel(model: string): ModelTarget {
   if (model.startsWith("claude:")) {
     const cliModel = model.slice("claude:".length);
@@ -287,7 +298,7 @@ function resolveModel(model: string): ModelTarget {
     return { requested: model, backend: "omp", cliModel: model };
   }
 
-  if (model.startsWith("mistralai/")) {
+  if (OPENROUTER_PROVIDER_PREFIXES.some((prefix) => model.startsWith(prefix))) {
     return { requested: model, backend: "omp", cliModel: `openrouter/${model}` };
   }
 
@@ -601,7 +612,7 @@ async function directoryExists(path: string): Promise<boolean> {
 }
 
 function printHelp(): void {
-  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <argus|neutral|direct> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nModel ids:\n  claude:sonnet\n  openai-codex/gpt-5.5\n  opencode-go/<id>\n  openrouter/<provider>/<id>\n  mistralai/<id>`);
+  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <argus|neutral|direct> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nModel ids:\n  claude:<alias>\n  openai-codex/<id>\n  opencode-go/<id>\n  openrouter/<provider>/<id>\n  <OpenRouter provider>/<id>`);
 }
 
 await main();
