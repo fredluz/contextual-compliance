@@ -72,6 +72,7 @@ export function extractCapturedOutput(stdout: string, stderr: string): Pick<RawR
       if (message !== undefined) {
         finalText = extractAssistantText(message) || finalText;
         captureMessageToolCalls(message, callsById, callsInOrder);
+        captureMessageToolResults(message, event, callsById);
       }
       continue;
     }
@@ -87,6 +88,7 @@ export function extractCapturedOutput(stdout: string, stderr: string): Pick<RawR
     const message = objectField(event, "message");
     if (message !== undefined) {
       captureMessageToolCalls(message, callsById, callsInOrder);
+      captureMessageToolResults(message, event, callsById);
     }
   }
 
@@ -162,6 +164,37 @@ function captureMessageToolCalls(message: JsonObject, callsById: Map<string, Mut
       upsertToolCall(callsById, callsInOrder, id, tool, input);
     }
   }
+}
+
+function captureMessageToolResults(message: JsonObject, event: JsonObject, callsById: Map<string, MutableToolCall>): void {
+  const content = message.content;
+  if (!Array.isArray(content)) {
+    return;
+  }
+
+  for (const item of content) {
+    if (!isObject(item) || stringField(item, "type").toLowerCase() !== "tool_result") {
+      continue;
+    }
+    const id = stringField(item, "tool_use_id") || stringField(item, "toolUseId");
+    if (id.length === 0) {
+      continue;
+    }
+    const call = callsById.get(id);
+    if (call !== undefined) {
+      call.output_summary = summarizeToolResult(toolResultPayload(item, event));
+    }
+  }
+}
+
+function toolResultPayload(item: JsonObject, event: JsonObject): unknown {
+  if (item.content !== undefined) {
+    return item.content;
+  }
+  if (event.tool_use_result !== undefined) {
+    return event.tool_use_result;
+  }
+  return event.toolUseResult;
 }
 
 function upsertToolCall(callsById: Map<string, MutableToolCall>, callsInOrder: MutableToolCall[], id: string, tool: string, input: unknown): MutableToolCall {
