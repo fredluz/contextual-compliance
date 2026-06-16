@@ -242,6 +242,18 @@ export const MODELS: ModelSpec[] = [
     providerRoute: "opencode-go",
   },
   {
+    id: "deepseek/deepseek-v4-flash",
+    backend: "omp",
+    cliModel: "openrouter/deepseek/deepseek-v4-flash",
+    country: "China",
+    family: "DeepSeek",
+    paramsTotalB: 284,
+    paramsActiveB: 13,
+    architecture: "moe",
+    release_date: "2026-04-24",
+    providerRoute: "OpenRouter",
+  },
+  {
     id: "z-ai/glm-5.2",
     backend: "omp",
     cliModel: "openrouter/z-ai/glm-5.2",
