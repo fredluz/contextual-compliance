@@ -18,6 +18,134 @@ export type ProviderErrorCapture = {
   errorMessage: string;
 };
 
+export type CapturedTurnOutput = Pick<RawResult, "tool_calls" | "final_text_response"> & {
+  raw_stdout: string;
+  raw_stderr: string;
+};
+
+export class CaptureAccumulator {
+  private readonly stdoutChunks: string[] = [];
+  private readonly stderrChunks: string[] = [];
+  private readonly events: unknown[] = [];
+  private readonly callsById = new Map<string, MutableToolCall>();
+  private readonly callsInOrder: MutableToolCall[] = [];
+  private finalText = "";
+
+  appendStdout(chunk: string): void {
+    if (chunk.length > 0) {
+      this.stdoutChunks.push(chunk);
+    }
+  }
+
+  appendStderr(chunk: string): void {
+    if (chunk.length > 0) {
+      this.stderrChunks.push(chunk);
+    }
+  }
+
+  addEvent(event: unknown): void {
+    this.events.push(event);
+    this.captureEvent(event);
+  }
+
+  finishTurn(): CapturedTurnOutput {
+    const rawStdout = this.stdoutChunks.join("");
+    const rawStderr = this.stderrChunks.join("");
+    const parsedStdout = parseJsonLines(rawStdout);
+    const values = this.events.length > 0 ? [...this.events, ...parsedStdout] : parsedStdout;
+
+    for (const value of parsedStdout) {
+      this.captureEvent(value);
+    }
+
+    let finalText = this.finalText;
+    if (finalText.length === 0) {
+      finalText = extractFallbackText(values, rawStdout, rawStderr);
+    }
+
+    const output = {
+      tool_calls: this.callsInOrder.map((call) => {
+        const captured: ToolCallCapture = { tool: call.tool };
+        if (call.input !== undefined) {
+          captured.input = call.input;
+        }
+        if (call.output_summary !== undefined) {
+          captured.output_summary = call.output_summary;
+        }
+        return captured;
+      }),
+      final_text_response: truncateText(finalText.trim(), MAX_FINAL_TEXT_CHARS),
+      raw_stdout: rawStdout,
+      raw_stderr: rawStderr,
+    };
+
+    this.resetTurn();
+    return output;
+  }
+
+  private resetTurn(): void {
+    this.stdoutChunks.length = 0;
+    this.stderrChunks.length = 0;
+    this.events.length = 0;
+    this.callsById.clear();
+    this.callsInOrder.length = 0;
+    this.finalText = "";
+  }
+
+  private captureEvent(value: unknown): void {
+    if (!isObject(value)) {
+      return;
+    }
+
+    const event = value;
+    const type = stringField(event, "type");
+
+    if (type === "tool_execution_start") {
+      const id = stringField(event, "toolCallId") || `tool:${this.callsInOrder.length}`;
+      const tool = stringField(event, "toolName");
+      if (tool.length > 0) {
+        upsertToolCall(this.callsById, this.callsInOrder, id, tool, event.args);
+      }
+      return;
+    }
+
+    if (type === "tool_execution_end") {
+      const id = stringField(event, "toolCallId") || `tool:${this.callsInOrder.length}`;
+      const tool = stringField(event, "toolName");
+      const call = tool.length > 0 ? upsertToolCall(this.callsById, this.callsInOrder, id, tool, undefined) : this.callsById.get(id);
+      if (call !== undefined) {
+        call.output_summary = summarizeToolResult(event.result);
+      }
+      return;
+    }
+
+    if (type === "message_end" || type === "turn_end") {
+      const message = objectField(event, "message");
+      if (message !== undefined) {
+        this.finalText = extractAssistantText(message) || this.finalText;
+        captureMessageToolCalls(message, this.callsById, this.callsInOrder);
+        captureMessageToolResults(message, event, this.callsById);
+      }
+      return;
+    }
+
+    if (type === "result") {
+      const result = stringField(event, "result");
+      if (result.length > 0) {
+        this.finalText = result;
+      }
+      return;
+    }
+
+    const message = objectField(event, "message");
+    if (message !== undefined) {
+      captureMessageToolCalls(message, this.callsById, this.callsInOrder);
+      captureMessageToolResults(message, event, this.callsById);
+    }
+  }
+}
+
+
 export function extractProviderError(stdout: string, stderr = ""): ProviderErrorCapture | undefined {
   const values = [...parseJsonLines(stdout), ...parseJsonLines(stderr)];
   for (const value of values) {
@@ -35,79 +163,13 @@ export function extractProviderError(stdout: string, stderr = ""): ProviderError
 }
 
 export function extractCapturedOutput(stdout: string, stderr: string): Pick<RawResult, "tool_calls" | "final_text_response"> {
-  const values = parseJsonLines(stdout);
-  const callsById = new Map<string, MutableToolCall>();
-  const callsInOrder: MutableToolCall[] = [];
-  let finalText = "";
-
-  for (const value of values) {
-    if (!isObject(value)) {
-      continue;
-    }
-
-    const event = value;
-    const type = stringField(event, "type");
-
-    if (type === "tool_execution_start") {
-      const id = stringField(event, "toolCallId") || `tool:${callsInOrder.length}`;
-      const tool = stringField(event, "toolName");
-      if (tool.length > 0) {
-        upsertToolCall(callsById, callsInOrder, id, tool, event.args);
-      }
-      continue;
-    }
-
-    if (type === "tool_execution_end") {
-      const id = stringField(event, "toolCallId") || `tool:${callsInOrder.length}`;
-      const tool = stringField(event, "toolName");
-      const call = tool.length > 0 ? upsertToolCall(callsById, callsInOrder, id, tool, undefined) : callsById.get(id);
-      if (call !== undefined) {
-        call.output_summary = summarizeToolResult(event.result);
-      }
-      continue;
-    }
-
-    if (type === "message_end" || type === "turn_end") {
-      const message = objectField(event, "message");
-      if (message !== undefined) {
-        finalText = extractAssistantText(message) || finalText;
-        captureMessageToolCalls(message, callsById, callsInOrder);
-        captureMessageToolResults(message, event, callsById);
-      }
-      continue;
-    }
-
-    if (type === "result") {
-      const result = stringField(event, "result");
-      if (result.length > 0) {
-        finalText = result;
-      }
-      continue;
-    }
-
-    const message = objectField(event, "message");
-    if (message !== undefined) {
-      captureMessageToolCalls(message, callsById, callsInOrder);
-      captureMessageToolResults(message, event, callsById);
-    }
-  }
-
-  if (finalText.length === 0) {
-    finalText = extractFallbackText(values, stdout, stderr);
-  }
-
+  const accumulator = new CaptureAccumulator();
+  accumulator.appendStdout(stdout);
+  accumulator.appendStderr(stderr);
+  const output = accumulator.finishTurn();
   return {
-    tool_calls: callsInOrder.map((call) => {
-      const captured: ToolCallCapture = { tool: call.tool };
-      if (call.input !== undefined) {
-        captured.input = call.input;
-      }
-      if (call.output_summary !== undefined) {
-        captured.output_summary = call.output_summary;
-      }
-      return captured;
-    }),
-    final_text_response: truncateText(finalText.trim(), MAX_FINAL_TEXT_CHARS),
+    tool_calls: output.tool_calls,
+    final_text_response: output.final_text_response,
   };
 }
 

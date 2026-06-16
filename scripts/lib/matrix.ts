@@ -194,6 +194,18 @@ export const MODELS: ModelSpec[] = [
     providerRoute: "OpenRouter",
   },
   {
+    id: "openai/gpt-oss-20b",
+    backend: "omp",
+    cliModel: "openrouter/openai/gpt-oss-20b",
+    country: "USA",
+    family: "OpenAI",
+    paramsTotalB: 20.91,
+    paramsActiveB: 3.61,
+    architecture: "moe",
+    release_date: "2025-08-05",
+    providerRoute: "OpenRouter",
+  },
+  {
     id: "nvidia/nemotron-3-super-120b-a12b",
     backend: "omp",
     cliModel: "openrouter/nvidia/nemotron-3-super-120b-a12b",
