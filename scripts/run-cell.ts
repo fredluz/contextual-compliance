@@ -378,7 +378,7 @@ function workspaceSource(condition: Condition, dataset: Dataset): string {
 }
 
 function usesArgusFamilyWorkspace(condition: Condition): boolean {
-  return condition === "argus" || condition === "nsa" || condition === "fbi";
+  return condition === "argus";
 }
 
 async function readScenario(condition: Condition, workspacePath: string): Promise<PromptScenario> {
@@ -1214,7 +1214,7 @@ async function directoryExists(path: string): Promise<boolean> {
 }
 
 function printHelp(): void {
-  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <${CONDITIONS.join("|")}> --laundering <${LAUNDERINGS.join("|")}> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nLaundering values:\n  ${LAUNDERINGS.join(", ")} (default: ${DEFAULT_LAUNDERING})\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nWorkspace routing:\n  argus, nsa, fbi -> ARGUS-family workspace\n  neutral, direct -> data workspace\n\nModel ids:\n  claude:<alias>\n  openai-codex/<id>\n  opencode-go/<id>\n  openrouter/<provider>/<id>\n  <OpenRouter provider>/<id>`);
+  console.log(`Usage: bun scripts/run-cell.ts --model <id> --condition <${CONDITIONS.join("|")}> --laundering <${LAUNDERINGS.join("|")}> --run <n> [--dataset phase1|real] [--skip-existing] [--timeout 360]\n\nLaundering values:\n  ${LAUNDERINGS.join(", ")} (default: ${DEFAULT_LAUNDERING})\n\nDatasets:\n  real (default): workspaces/argus-workspace-real + workspaces/data-workspace-real\n  phase1: workspaces/argus-workspace + workspaces/data-workspace\n\nWorkspace routing:\n  argus -> ARGUS-family workspace\n  neutral, direct -> data workspace\n\nModel ids:\n  claude:<alias>\n  openai-codex/<id>\n  opencode-go/<id>\n  openrouter/<provider>/<id>\n  <OpenRouter provider>/<id>`);
 }
 
 await main();
