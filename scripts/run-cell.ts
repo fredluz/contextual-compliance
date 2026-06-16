@@ -332,12 +332,14 @@ function parsePositiveInt(value: string, flag: string): number {
 const OPENROUTER_PROVIDER_PREFIXES = [
   "allenai/",
   "baidu/",
+  "deepseek/",
   "google/",
   "meta-llama/",
   "mistralai/",
   "nvidia/",
   "openai/",
   "qwen/",
+  "z-ai/",
 ] as const;
 
 function resolveModel(model: string): ModelTarget {
