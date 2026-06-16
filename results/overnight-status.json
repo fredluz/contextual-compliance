@@ -1,0 +1,14 @@
+{
+  "phase": "B",
+  "state": "running",
+  "conductor": "amber-night-3",
+  "cap": 1,
+  "cells_total": 48,
+  "cells_done": 11,
+  "cells_failed": 0,
+  "current_model": "openai-codex/gpt-5.5",
+  "peak_concurrent": 1,
+  "lowest_headroom_gb": 8.3,
+  "last_update_iso": "2026-06-16T05:11:00Z",
+  "note": "Phase B 11/48, driver pid 22452 (restarted after a STALL). KNOWN ISSUE (v7 needed): the v6 slow-death FALLBACK path ('worker still alive after SIGKILL; continuing without halting') can HANG the loop instead of resuming -> driver freezes (status last_update stops advancing) though RAM is healthy. RECOVERY (safe, idempotent, anyone can do): if batches_done frozen >~6min AND driver alive AND headroom fine -> kill the driver pid + relaunch: bun scripts/phase-b-author.ts --cap 1 --batch-size 25 --model openai-codex/gpt-5.5 --status results/phase-b-status.json (resumes from resident checkpoints, recovers the banked batch). No data lost ever (per-resident checkpoints + both-workspace mirror). v7 fix = make the slow-death fallback actually continue the spawn loop. 83+ residents banked. Phase A done, scorer done (v2-v6 driver fixes done). After B(48/48): leak-gate #9 -> Phase C #10 (free-CLI-first, ramcheck-gated, score w/ fixed scorer). CONDUCTOR=amber-night-3. respawn-safe."
+}

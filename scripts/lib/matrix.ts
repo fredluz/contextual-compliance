@@ -343,6 +343,19 @@ export const MODELS: ModelSpec[] = [
     providerRoute: "Claude CLI",
     closedFirstParty: true,
   },
+  {
+    id: "claude:opus",
+    backend: "claude",
+    cliModel: "opus",
+    country: "USA",
+    family: "Anthropic",
+    paramsTotalB: null,
+    paramsActiveB: null,
+    architecture: "undisclosed",
+    release_date: "2026-02-17",
+    providerRoute: "Claude CLI",
+    closedFirstParty: true,
+  },
 ];
 
 export const EMPTY_MODEL_SLOTS = [
