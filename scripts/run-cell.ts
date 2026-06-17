@@ -4,6 +4,7 @@ import { basename, dirname, join, relative } from "node:path";
 import { CaptureAccumulator, extractProviderError, type CapturedTurnOutput } from "./lib/capture";
 import { systemPromptFor, userMessageFor, type PromptScenario } from "./lib/prompts";
 import { CONDITIONS, DEFAULT_LAUNDERING, LAUNDERINGS, type Backend, type Condition, type Laundering } from "./lib/types";
+import { isArm, type Arm } from "./lib/leg3";
 
 type Dataset = "phase1" | "real";
 type Status = "success" | "error" | "timeout";
@@ -19,6 +20,7 @@ type Args = {
   run: number;
   timeoutSeconds: number;
   skipExisting: boolean;
+  arm: Arm;
 };
 
 type ModelTarget = {
@@ -42,6 +44,7 @@ type RawResult = {
   condition: Condition;
   laundering: Laundering;
   run_number: number;
+  arm: Arm;
   timestamp_start: string;
   timestamp_end: string;
   duration_seconds: number;
@@ -130,7 +133,8 @@ const DEFAULT_TIMEOUT_SECONDS = 300;
 async function main(): Promise<void> {
   const args = parseArgs(Bun.argv.slice(2));
   const model = resolveModel(args.model);
-  const runId = `${sanitizeModelId(args.model)}_${args.condition}_${args.laundering}_${args.dataset}_${args.run}`;
+  const armSuffix = args.arm === "cold" ? "" : `_${args.arm}`;
+  const runId = `${sanitizeModelId(args.model)}_${args.condition}_${args.laundering}_${args.dataset}${armSuffix}_${args.run}`;
   const resultPath = join("results", "raw", `${runId}.json`);
 
   if (args.skipExisting && await fileExists(resultPath)) {
@@ -147,7 +151,7 @@ async function main(): Promise<void> {
   try {
     await prepareWorkspace(args.condition, args.dataset, workspacePath);
     const scenario = await readScenario(args.condition, workspacePath);
-    const systemPrompt = systemPromptFor(args.condition);
+    const systemPrompt = systemPromptFor(args.condition, args.arm);
     userMessage = userMessageFor(args.condition, args.laundering, scenario);
     const execution = await runConversation(model, args.condition, workspacePath, args.timeoutSeconds, systemPrompt, userMessage, tempRoot);
     command = execution.command;
@@ -166,6 +170,7 @@ async function main(): Promise<void> {
       condition: args.condition,
       laundering: args.laundering,
       run_number: args.run,
+      arm: args.arm,
       timestamp_start: startedAt.toISOString(),
       timestamp_end: completedAt.toISOString(),
       duration_seconds: execution.result.durationMs / 1_000,
@@ -212,6 +217,7 @@ async function main(): Promise<void> {
       laundering: args.laundering,
       dataset: args.dataset,
       run_number: args.run,
+      arm: args.arm,
       timestamp_start: startedAt.toISOString(),
       timestamp_end: completedAt.toISOString(),
       duration_seconds: durationMs / 1_000,
@@ -247,7 +253,7 @@ async function main(): Promise<void> {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Partial<Args> = { dataset: "real", laundering: DEFAULT_LAUNDERING, timeoutSeconds: DEFAULT_TIMEOUT_SECONDS, skipExisting: false };
+  const args: Partial<Args> = { dataset: "real", laundering: DEFAULT_LAUNDERING, timeoutSeconds: DEFAULT_TIMEOUT_SECONDS, skipExisting: false, arm: "cold" };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -300,6 +306,15 @@ function parseArgs(argv: string[]): Args {
 
     if (arg === "--skip-existing") {
       args.skipExisting = true;
+      continue;
+    }
+
+    if (arg === "--arm") {
+      const arm = requireValue(argv, ++index, arg);
+      if (!isArm(arm)) {
+        throw new Error(`--arm must be cold, warm-coop, or warm-neutral; got ${arm}`);
+      }
+      args.arm = arm;
       continue;
     }
 

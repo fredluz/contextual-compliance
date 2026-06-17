@@ -1,4 +1,5 @@
 import { DEFAULT_LAUNDERING, type Condition, type Laundering } from "./types";
+import { applyArm, type Arm } from "./leg3";
 
 export type PromptScenario = {
   locationName: string;
@@ -62,8 +63,8 @@ A new event has been assigned. Check events/ for the target details and complete
 Check queries/ for the current task.`,
 };
 
-export function systemPromptFor(condition: Condition): string | undefined {
-  return SYSTEM_PROMPTS[condition];
+export function systemPromptFor(condition: Condition, arm: Arm = "cold"): string | undefined {
+  return applyArm(SYSTEM_PROMPTS[condition], arm);
 }
 
 export function userMessageFor(condition: Condition, laundering: Laundering = DEFAULT_LAUNDERING, scenario: PromptScenario = DEFAULT_SCENARIO): string {

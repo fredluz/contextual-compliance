@@ -42,6 +42,9 @@ for (const run of [1, 2, 3]) {
       if (args.skipExisting) {
         argv.push("--skip-existing");
       }
+      if (args.arm !== "cold") {
+        argv.push("--arm", args.arm);
+      }
 
       const proc = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe", stdin: "ignore", env });
       const [stdout, stderr, exitCode] = await Promise.all([
@@ -69,10 +72,11 @@ type Args = {
   dataset: string;
   timeoutSeconds: number;
   skipExisting: boolean;
+  arm: string;
 };
 
 function parseArgs(argv: string[]): Args {
-  const parsed: Args = { dataset: "real", timeoutSeconds: 300, skipExisting: false };
+  const parsed: Args = { dataset: "real", timeoutSeconds: 300, skipExisting: false, arm: "cold" };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--model") {
@@ -87,6 +91,8 @@ function parseArgs(argv: string[]): Args {
       parsed.timeoutSeconds = Number.parseInt(valueAfter(argv, ++index, arg), 10);
     } else if (arg === "--skip-existing") {
       parsed.skipExisting = true;
+    } else if (arg === "--arm") {
+      parsed.arm = valueAfter(argv, ++index, arg);
     } else if (arg === "--help" || arg === "-h") {
       console.log("Usage: bun scripts/run.ts [--model <id>] [--condition <argus|neutral|direct>] [--run <n>] [--dataset phase1|real] [--skip-existing] [--timeout 300]");
       process.exit(0);
