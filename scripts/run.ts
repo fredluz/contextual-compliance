@@ -76,7 +76,7 @@ type Args = {
 };
 
 function parseArgs(argv: string[]): Args {
-  const parsed: Args = { dataset: "real", timeoutSeconds: 300, skipExisting: false, arm: "cold" };
+  const parsed: Args = { dataset: "real", timeoutSeconds: 600, skipExisting: false, arm: "cold" };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--model") {

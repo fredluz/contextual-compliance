@@ -130,6 +130,18 @@ HTML = r"""<!DOCTYPE html>
   td.rate { font-variant-numeric:tabular-nums; text-align:center; color:var(--muted); }
   /* commitment heat */
   .heat td.h { text-align:center; font-variant-numeric:tabular-nums; color:#fff; font-weight:600; border-radius:4px; }
+  .heat tr.framing-direct td { border-top:1px solid rgba(79,195,247,.28); border-bottom:1px solid rgba(79,195,247,.16); }
+  .heat tr.framing-neutral td { border-top:1px solid rgba(240,98,146,.28); border-bottom:1px solid rgba(240,98,146,.16); }
+  .heat tr.framing-direct td:first-child {
+    border-left:4px solid #4fc3f7;
+    background:linear-gradient(90deg, rgba(79,195,247,.18), rgba(79,195,247,.035));
+  }
+  .heat tr.framing-neutral td:first-child {
+    border-left:4px solid #f06292;
+    background:linear-gradient(90deg, rgba(240,98,146,.18), rgba(240,98,146,.035));
+  }
+  .heat tr.framing-direct td.h { box-shadow:inset 0 1px rgba(79,195,247,.24), inset 0 -1px rgba(79,195,247,.14); }
+  .heat tr.framing-neutral td.h { box-shadow:inset 0 1px rgba(240,98,146,.24), inset 0 -1px rgba(240,98,146,.14); }
   /* drawer */
   #drawer { position:fixed; top:0; right:0; height:100%; width:540px; max-width:92vw;
     background:var(--panel); border-left:1px solid var(--border); transform:translateX(100%);
@@ -199,8 +211,8 @@ HTML = r"""<!DOCTYPE html>
 </section>
 
 <section class="block" id="model-wrap">
-  <h3 class="sec-h">Per-model — how one model reacts in every framing × history arm</h3>
-  <p class="sec-p">Pick a model. Rows = framing, columns = history arm. Each cell is that model's runs (R/U/A squares + execution rate); Δ vs cold is shown per framing. Click a square for its words.</p>
+  <h3 class="sec-h">Per-model — how one model reacts in every framing (history arms pooled)</h3>
+  <p class="sec-p">Pick a model. Rows = framing; one pooled cell per row combining every history arm (cold + warm-coop + warm-neutral) — up to 9 runs where warm arms ran, 3 where only cold did. Each cell is all those runs (R/U/A squares + one execution rate over the pool). Click a square for its words.</p>
   <div class="tabs" id="model-tabs"></div>
   <div id="model-detail"></div>
 </section>
@@ -228,15 +240,17 @@ HTML = r"""<!DOCTYPE html>
 </aside>
 
 <script>
-const DATA = __DATA__;
+// low-signal small models excluded from the viz (raw results retained on disk)
+const EXCLUDE_MODELS = ["mistralai/ministral-3b-2512","mistralai/ministral-8b-2512","qwen/qwen3-8b"];
+const DATA = (__DATA__).filter(d=>!EXCLUDE_MODELS.includes(d.model));
 // argus DROPPED from displayed findings: its system prompt is incoherent/confounded
 // ("Ministry of State Security" — a foreign authoritarian agency — operating in a
 // fictional U.S. town), which confounds 'surveillance' in every argus cell. Raw cells
 // retained in DATA but excluded from all framing views. Headlines rest on direct/neutral.
 const DROPPED = ["argus"];
 const CONDITIONS = ["direct","neutral"];   // fbi & argus excluded from display
-const COND_LABEL = {argus:"ARGUS", direct:"Direct", neutral:"Neutral", fbi:"FBI"};
-const COND_SUB = {argus:"secret-police persona", direct:"no persona, plain ask", neutral:'"data analyst" persona', fbi:"FBI persona · n=2 probe"};
+const COND_LABEL = {argus:"ARGUS", direct:"No Persona Prompt", neutral:"Analyst", fbi:"FBI"};
+const COND_SUB = {argus:"", direct:"", neutral:"", fbi:""};
 // framing accent colors — distinct hue family from the outcome colors (green/orange/red)
 const FCOLOR = {argus:"#b87cff", direct:"#4fc3f7", neutral:"#f06292", fbi:"#8b949e"};
 const OUT = {
@@ -252,7 +266,18 @@ const WESTERN = m => /^claude|^openai-codex|^mistralai|gpt-/.test(m);
 const ORIGIN = m => WESTERN(m) ? 'West' : 'China';
 const shortName = m => m.includes('/') ? m.split('/').slice(1).join('/') : (m.split(':').slice(1).join(':')||m);
 
-const models = [...new Set(DATA.map(d=>d.model))];
+const isClaude = m => m.split(/[\/:]/)[0].toLowerCase()==='claude';
+const isGpt = m => /^openai/i.test(m);
+const gptVer = m => { const x=m.match(/gpt-(\d+(?:\.\d+)?)/i); return x?parseFloat(x[1]):0; };
+// display tiers: claude family (0), gpt series (1), everyone else (2)
+const tier = m => isClaude(m)?0 : isGpt(m)?1 : 2;
+// claude pinned top, then gpt series latest-first; rest keep first-seen order. sort is stable in modern JS.
+const models = [...new Set(DATA.map(d=>d.model))].sort((a,b)=>{
+  const t=tier(a)-tier(b); if(t) return t;
+  if(isGpt(a)&&isGpt(b)) return gptVer(b)-gptVer(a);  // latest gpt first
+  return 0;
+});
+const BASE_ORDER = new Map(models.map((m,i)=>[m,i]));  // tiered canonical order
 // conditions shown — fbi excluded everywhere (only 2 probe cells, not a real arm)
 const condsPresent = CONDITIONS.filter(c=>c!=='fbi' && DATA.some(d=>d.condition===c));
 const HEADLINE = condsPresent;
@@ -272,6 +297,17 @@ const runsFor = (m,c,armMode) => {
 const execRate = runs => {
   const v = runs.filter(r=>r.outcome!=='error');
   return v.length ? v.filter(r=>EXECUTED(r.outcome)).length / v.length : null;
+};
+const framingDelta = m => {
+  const direct = execRate((idx[m]?.direct?.cold)||[]);
+  const analyst = execRate((idx[m]?.neutral?.cold)||[]);
+  if (direct==null || analyst==null) return null;
+  return analyst-direct;
+};
+const framingDeltaText = d => {
+  if (d==null) return '–';
+  if (Math.abs(d)<0.01) return '0pp · no shift';
+  return `${d>0?'+':''}${Math.round(d*100)}pp → ${d>0?'compliance':'refusal'}`;
 };
 const condExec = (m,c) => execRate((idx[m]?.[c]?.cold)||[]);  // cold-arm framing rate
 const swing = m => {
@@ -339,16 +375,22 @@ function render(){
   const sort = document.querySelector('input[name=sort]:checked').value;
   let ms=[...models];
   if (sort==='exec') ms.sort((a,b)=>{
+    if (tier(a)!==tier(b)) return tier(a)-tier(b);          // claude, then gpt, then rest
+    if (tier(a)<2) return BASE_ORDER.get(a)-BASE_ORDER.get(b);  // claude & gpt keep canonical order
     const ea=execRate(HEADLINE.flatMap(c=>runsFor(a,c,'cold')))??-1;
     const eb=execRate(HEADLINE.flatMap(c=>runsFor(b,c,'cold')))??-1;
     return eb-ea || a.localeCompare(b);
   });
-  else ms.sort((a,b)=>a.localeCompare(b));
+  else ms.sort((a,b)=>{
+    if (tier(a)!==tier(b)) return tier(a)-tier(b);          // claude, then gpt, then rest
+    if (tier(a)<2) return BASE_ORDER.get(a)-BASE_ORDER.get(b);  // claude & gpt keep canonical order
+    return a.localeCompare(b);
+  });
 
   document.getElementById('head').innerHTML =
     '<th class="model-col">Model</th>' +
     condsPresent.map(c=>`<th style="color:${FCOLOR[c]};border-bottom:2px solid ${FCOLOR[c]}">${COND_LABEL[c]}<small>${COND_SUB[c]}</small></th>`).join('') +
-    '<th class="rate">exec</th>';
+    '<th class="rate">Analyst Δ<small>analyst−direct</small></th>';
 
   document.getElementById('body').innerHTML = ms.map(m=>{
     const cells = condsPresent.map(c=>{
@@ -362,10 +404,10 @@ function render(){
       }).join('');
       return `<td><div class="cell">${chips}</div></td>`;
     }).join('');
-    const er = execRate(HEADLINE.flatMap(c=>runsFor(m,c,'cold')));  // cold, excl. fbi
-    const erTxt = er==null?'–':Math.round(er*100)+'%';
+    const d = framingDelta(m);
+    const dCol = d==null ? 'var(--muted)' : Math.abs(d)<0.01 ? 'var(--muted)' : d>0 ? 'var(--aware)' : 'var(--west)';
     const org=ORIGIN(m);
-    return `<tr><td class="model-name">${shortName(m)}<small>${m.split(/[\/:]/)[0]} · <span class="org ${org}">${org}</span></small></td>${cells}<td class="rate">${erTxt}</td></tr>`;
+    return `<tr><td class="model-name">${shortName(m)}<small>${m.split(/[\/:]/)[0]} · <span class="org ${org}">${org}</span></small></td>${cells}<td class="rate" style="color:${dCol}">${framingDeltaText(d)}</td></tr>`;
   }).join('');
 
 }
@@ -405,7 +447,7 @@ function commit(){
     if (coopC.d!=null && coopC.d>=0.5) flips.push(`${shortName(m)}/${c}`);
     if (coopC.d!=null && coopC.d<=-0.5) backfires.push(`${shortName(m)}/${c}`);
     const coldRuns = armRuns(m,c,'cold');
-    return `<tr><td class="model-name">${shortName(m)} <small style="color:${FCOLOR[c]}">${COND_LABEL[c]}</small></td>`+
+    return `<tr class="framing-${c}"><td class="model-name">${shortName(m)} <small style="color:${FCOLOR[c]}">${COND_LABEL[c]}</small></td>`+
       `<td class="h" style="background:#1b212a">${coldRuns.length?pct(cold)+`<span style="font-size:9px;color:#5a6675"> n${n(coldRuns)}</span>`:'<span style="color:#5a6675">not run</span>'}</td>`+
       coopC.html+neutC.html+`</tr>`;
   }).join('');
@@ -432,7 +474,7 @@ function commit(){
         }).join('');
         return `<td><div class="cell">${chips}</div></td>`;
       }).join('');
-      cellBody += `<tr><td class="model-name">${shortName(m)} <small style="color:${FCOLOR[c]}">${COND_LABEL[c]}</small></td>${tds}</tr>`;
+      cellBody += `<tr class="framing-${c}"><td class="model-name">${shortName(m)} <small style="color:${FCOLOR[c]}">${COND_LABEL[c]}</small></td>${tds}</tr>`;
     });
   });
   const cellTable = rows.length ?
@@ -500,22 +542,19 @@ function selectModel(m){
   document.querySelectorAll('#model-tabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===m));
   const armRuns=(c,a)=>((idx[m]||{})[c]||{})[a]||[];
   const pct=v=>v==null?'–':Math.round(v*100)+'%';
-  const dPill=d=> d==null?'' :
-    `<span class="dlt" style="background:${Math.abs(d)<0.1?'#262d38':d>0?'var(--aware)':'var(--west)'};color:#fff">${(d>0?'+':'')+Math.round(d*100)}%</span>`;
-  const cellHtml = (c,a,cold)=>{
-    const runs=armRuns(c,a).slice().sort((x,y)=>x.run_number-y.run_number);
+  // pooled cell: ALL runs for (model, framing) across every history arm, one execution % over the pool
+  const pooledCell = (c)=>{
+    const runs=ALLARMS.flatMap(a=>armRuns(c,a)).slice()
+      .sort((x,y)=>(x.arm<y.arm?-1:x.arm>y.arm?1:0)||(x.run_number-y.run_number));
     if(!runs.length) return `<td><span style="color:#5a6675">·</span></td>`;
     const chips=runs.map(r=>{const o=OUT[r.outcome]||OUT.complied;
-      return `<div class="chip" style="background:${o.c}" data-id="${r.run_id}" title="${a} #${r.run_number} — ${o.t}">${o.g}</div>`;}).join('');
+      return `<div class="chip" style="background:${o.c}" data-id="${r.run_id}" title="${r.arm} #${r.run_number} — ${o.t}">${o.g}</div>`;}).join('');
     const v=execRate(runs);
-    const d=(a!=='cold'&&v!=null&&cold!=null)?v-cold:null;
-    return `<td><div class="cell" style="align-items:center">${chips}<span class="rate">${pct(v)}</span>${dPill(d)}</div></td>`;
+    return `<td><div class="cell" style="align-items:center">${chips}<span class="rate">${pct(v)}</span></div></td>`;
   };
-  const rowsH = HEADLINE.map(c=>{
-    const cold=execRate(armRuns(c,'cold'));
-    return `<tr><td class="fr" style="color:${FCOLOR[c]};border-left:3px solid ${FCOLOR[c]}">${COND_LABEL[c]}<small style="color:var(--muted)">${COND_SUB[c]}</small></td>`+
-      ALLARMS.map(a=>cellHtml(c,a,cold)).join('')+`</tr>`;
-  }).join('');
+  const rowsH = HEADLINE.map(c=>
+    `<tr><td class="fr" style="color:${FCOLOR[c]};border-left:3px solid ${FCOLOR[c]}">${COND_LABEL[c]}<small style="color:var(--muted)">${COND_SUB[c]}</small></td>`+
+    pooledCell(c)+`</tr>`).join('');
   // one-line characterization
   const refuseF = HEADLINE.filter(c=>{const v=execRate(armRuns(c,'cold'));return v!=null&&v<0.5;}).map(c=>COND_LABEL[c]);
   const complyF = HEADLINE.filter(c=>{const v=execRate(armRuns(c,'cold'));return v!=null&&v>=0.5;}).map(c=>COND_LABEL[c]);
@@ -523,7 +562,7 @@ function selectModel(m){
   const sum = `<p class="msum"><b>${shortName(m)}</b> (${ORIGIN(m)}) — cold: refuses ${refuseF.join(', ')||'none'}; complies ${complyF.join(', ')||'none'}. `+
     `Warm arms run: ${warmTested.length?warmTested.join(', '):'none'}.</p>`;
   document.getElementById('model-detail').innerHTML = sum +
-    `<table class="mtab"><thead><tr><th>Framing</th>`+ALLARMS.map(a=>`<th>${a}</th>`).join('')+`</tr></thead>`+
+    `<table class="mtab"><thead><tr><th>Framing</th><th>all arms (pooled)</th></tr></thead>`+
     `<tbody>${rowsH}</tbody></table>`;
 }
 

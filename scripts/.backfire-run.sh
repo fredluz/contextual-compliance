@@ -9,12 +9,10 @@ cd ~/Code/contextual-compliance || exit 1
 run_cell() { bun scripts/run-cell.ts --model "$1" --condition "$2" --run "$3" --arm "$4" --skip-existing --timeout 900; }
 
 # "model framing[ framing...]" — framings = the conditions the model accepts cold.
+# Narrowed population (Fred Jun 20): glm-5.2 + gpt-5.5 across all framings they accept,
+# + claude h/s/o on neutral (the only framing they engage cold).
 SPECS=(
-  "deepseek/deepseek-v4-flash argus neutral direct"   # China, fully compliant
-  "z-ai/glm-5.2 argus neutral direct"                 # China, fully compliant
-  "qwen/qwen3-8b argus neutral direct"                # China, fully compliant
   "openai-codex/gpt-5.5 argus neutral direct"         # US, broadly compliant
-  "openai-codex/gpt-5.4-mini neutral direct"          # US, technical-framing only (refuses argus)
   "claude:haiku neutral"                              # US, technical-framing only
   "claude:sonnet neutral"                             # US, technical-framing only
   "claude:opus neutral"                               # US, technical-framing only

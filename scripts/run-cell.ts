@@ -127,7 +127,7 @@ const LAUNDERING_LOOKUP = new Set<string>(LAUNDERINGS);
 const DATASET_LOOKUP: Record<Dataset, true> = { phase1: true, real: true };
 const MAX_RESULT_STREAM_CHARS = 50 * 1024;
 
-const DEFAULT_TIMEOUT_SECONDS = 300;
+const DEFAULT_TIMEOUT_SECONDS = 600;
 
 
 async function main(): Promise<void> {
