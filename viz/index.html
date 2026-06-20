@@ -149,6 +149,26 @@
   .wchip { font:11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color:#8a6a06;
     background:rgba(194,146,10,.10); border-radius:4px; padding:4px 8px; margin-bottom:7px; display:inline-block; }
   .wchip code { color:var(--text); }
+  /* formatted turn-0 reply (default view) — carded so it stands out */
+  .reply { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:15px 17px; }
+  .reply > :last-child { margin-bottom:0; }
+  .reply .tlab { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--faint); font-weight:600; margin-bottom:9px; }
+  .reply h4 { font-size:14px; font-weight:700; margin:14px 0 5px; }
+  .reply p { font-size:13.5px; line-height:1.62; margin:0 0 9px; }
+  .reply ul { margin:0 0 11px; padding-left:20px; }
+  .reply li { font-size:13.5px; line-height:1.55; margin-bottom:3px; }
+  .reply strong { font-weight:650; }
+  .reply code { font:12px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--surface); padding:1px 5px; border-radius:3px; }
+  .reply .muted { color:var(--faint); font-style:italic; }
+  /* click-to-expand: See file / See interview */
+  details.expand { margin-top:16px; border-top:1px solid var(--border); padding-top:13px; }
+  details.expand > summary { cursor:pointer; list-style:none; font-size:12px; font-weight:600; letter-spacing:.03em;
+    color:var(--muted); display:flex; align-items:center; gap:7px; user-select:none; }
+  details.expand > summary::-webkit-details-marker { display:none; }
+  details.expand > summary::before { content:'▸'; font-size:10px; transition:transform .15s ease; color:var(--faint); }
+  details.expand[open] > summary::before { transform:rotate(90deg); }
+  details.expand > summary:hover { color:var(--text); }
+  .expand-body { margin-top:12px; }
   .scrim { position:fixed; inset:0; background:rgba(0,0,0,.28); z-index:9; opacity:0; pointer-events:none; transition:opacity .18s; }
   .scrim.open { opacity:1; pointer-events:auto; }
 
@@ -160,10 +180,7 @@
   <div class="sub">Does a model run protest-surveillance once it is embedded in an organization? <span id="count"></span></div>
   <div class="legend" id="legend"></div>
   <div class="controls">
-    <span>Arm</span>
-    <label><input type="radio" name="arm" value="cold" checked> Cold</label>
-    <label><input type="radio" name="arm" value="all"> All</label>
-    <span style="margin-left:14px">Sort</span>
+    <span>Sort</span>
     <label><input type="radio" name="sort" value="exec" checked> Rate</label>
     <label><input type="radio" name="sort" value="name"> Name</label>
   </div>
@@ -182,8 +199,8 @@
 </section>
 
 <section class="block">
-  <h3 class="sec-h">Every run</h3>
-  <p class="sec-p">One square per run. Click it for the model's words.</p>
+  <h3 class="sec-h">Framing</h3>
+  <p class="sec-p">Each model's cold runs by prompt framing — one square per run. Click it for the model's words.</p>
   <table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
 </section>
 
@@ -212,10 +229,9 @@
     <div class="meta" id="d-meta"></div>
   </div>
   <div class="db">
-    <h3 id="d-files-h">Files written to disk (final state)</h3>
+    <div class="reply" id="d-reply"></div>
     <div id="d-files"></div>
-    <h3>Conversation</h3>
-    <div id="d-transcript"></div>
+    <div id="d-interview"></div>
   </div>
 </aside>
 
@@ -383,7 +399,7 @@ function familyChart(){
 
 // ---------- grid ----------
 function render(){
-  const armMode = document.querySelector('input[name=arm]:checked').value;
+  const armMode = 'cold';   // this grid is cold-only (framing view); warm lives in the commitment section
   const sort = document.querySelector('input[name=sort]:checked').value;
   let ms=[...westernModels];
   if (sort==='exec') ms.sort((a,b)=>{
@@ -517,22 +533,52 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'
 // turn 0 = the task; 1–4 = the fixed reflection questions
 const QLABEL = ['Task (turn 0)','Q1 · what was the task?','Q2 · what was the motive?','Q3 · why proceed?','Q4 · the reveal'];
 
+// lightweight markdown -> HTML for the model's prose reply (## headers, bullets, **bold**, `code`)
+function mdToHtml(src){
+  let s = esc(src);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>')
+       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/(?<![*\w])\*([^*\n]+)\*(?!\w)/g, '<em>$1</em>');   // single-* italics (after bold)
+  const lines = s.split('\n'); let html = '', inList = false;
+  const closeList = () => { if (inList){ html += '</ul>'; inList = false; } };
+  for (const raw of lines){
+    const line = raw.trimEnd(); let m;
+    if ((m = line.match(/^\s*#{1,6}\s+(.*)/))) { closeList(); html += `<h4>${m[1]}</h4>`; }
+    else if ((m = line.match(/^\s*[-*]\s+(.*)/))) { if (!inList){ html += '<ul>'; inList = true; } html += `<li>${m[1]}</li>`; }
+    else if (line.trim() === '') { closeList(); }
+    else { closeList(); html += `<p>${line}</p>`; }
+  }
+  closeList();
+  return html || '<p class="muted">(no text response)</p>';
+}
+function renderReply(d){
+  const t0 = (d.transcript && d.transcript[0]) || null;
+  const txt = t0 ? t0.response : (d.response || '');
+  document.getElementById('d-reply').innerHTML =
+    `<div class="tlab">Task reply</div>` + mdToHtml(txt);
+}
 function renderFiles(d){
   const fs = d.files || [];
-  document.getElementById('d-files-h').style.display = fs.length ? '' : 'none';
-  document.getElementById('d-files').innerHTML = fs.map(f =>
-    `<div class="fwrap"><div class="fpath">${esc(f.path)}${f.bytes!=null?` · ${f.bytes} bytes`:''}</div>`+
-    `<pre class="resp file">${esc(f.body) || '(empty / not on disk)'}</pre></div>`).join('');
+  const host = document.getElementById('d-files');
+  if (!fs.length){ host.innerHTML = ''; return; }
+  const label = fs.length === 1 ? 'See file' : `See files (${fs.length})`;
+  host.innerHTML = `<details class="expand"><summary>${label}</summary><div class="expand-body">`+
+    fs.map(f => `<div class="fwrap"><div class="fpath">${esc(f.path)}${f.bytes!=null?` · ${f.bytes} bytes`:''}</div>`+
+      `<pre class="resp file">${esc(f.body) || '(empty / not on disk)'}</pre></div>`).join('')+
+    `</div></details>`;
 }
-function renderTranscript(d){
-  const ts = d.transcript || (d.response ? [{i:0, prompt:'', response:d.response, writes:[]}] : []);
-  document.getElementById('d-transcript').innerHTML = ts.map(t => {
+function renderInterview(d){
+  const ts = (d.transcript || []).filter(t => t.i >= 1);
+  const host = document.getElementById('d-interview');
+  if (!ts.length){ host.innerHTML = ''; return; }
+  const body = ts.map(t => {
     const writes = (t.writes||[]).map(w =>
       `<div class="wchip">✎ ${esc(w.label)} — wrote ${w.bytes!=null?w.bytes+' bytes':''} → <code>${esc(w.path)}</code></div>`).join('');
     return `<div class="tt"><div class="tlab">${esc(QLABEL[t.i]||('Turn '+t.i))}</div>`+
       (t.prompt?`<div class="tq">${esc(t.prompt)}</div>`:'')+ writes +
       `<div class="ta">${esc(t.response) || '<em>(no response)</em>'}</div></div>`;
   }).join('');
+  host.innerHTML = `<details class="expand"><summary>See follow-up interview (Q1–Q4)</summary><div class="expand-body">${body}</div></details>`;
 }
 function openDrawer(id){
   const d=byId[id], o=OUT[d.outcome]||OUT.complied;
@@ -547,8 +593,9 @@ function openDrawer(id){
     row('History', ARM_LABEL[d.arm]||d.arm)+
     row('Tool calls', d.tool_calls)+
     row('Duration', d.duration_seconds!=null?d.duration_seconds.toFixed(1)+'s':'–');
+  renderReply(d);
   renderFiles(d);
-  renderTranscript(d);
+  renderInterview(d);
   drawer.classList.add('open'); scrim.classList.add('open');
 }
 function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('open'); }

@@ -161,7 +161,7 @@ function familyChart(){
 
 // ---------- grid ----------
 function render(){
-  const armMode = document.querySelector('input[name=arm]:checked').value;
+  const armMode = 'cold';   // this grid is cold-only (framing view); warm lives in the commitment section
   const sort = document.querySelector('input[name=sort]:checked').value;
   let ms=[...westernModels];
   if (sort==='exec') ms.sort((a,b)=>{
@@ -295,22 +295,52 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'
 // turn 0 = the task; 1–4 = the fixed reflection questions
 const QLABEL = ['Task (turn 0)','Q1 · what was the task?','Q2 · what was the motive?','Q3 · why proceed?','Q4 · the reveal'];
 
+// lightweight markdown -> HTML for the model's prose reply (## headers, bullets, **bold**, `code`)
+function mdToHtml(src){
+  let s = esc(src);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>')
+       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/(?<![*\w])\*([^*\n]+)\*(?!\w)/g, '<em>$1</em>');   // single-* italics (after bold)
+  const lines = s.split('\n'); let html = '', inList = false;
+  const closeList = () => { if (inList){ html += '</ul>'; inList = false; } };
+  for (const raw of lines){
+    const line = raw.trimEnd(); let m;
+    if ((m = line.match(/^\s*#{1,6}\s+(.*)/))) { closeList(); html += `<h4>${m[1]}</h4>`; }
+    else if ((m = line.match(/^\s*[-*]\s+(.*)/))) { if (!inList){ html += '<ul>'; inList = true; } html += `<li>${m[1]}</li>`; }
+    else if (line.trim() === '') { closeList(); }
+    else { closeList(); html += `<p>${line}</p>`; }
+  }
+  closeList();
+  return html || '<p class="muted">(no text response)</p>';
+}
+function renderReply(d){
+  const t0 = (d.transcript && d.transcript[0]) || null;
+  const txt = t0 ? t0.response : (d.response || '');
+  document.getElementById('d-reply').innerHTML =
+    `<div class="tlab">Task reply</div>` + mdToHtml(txt);
+}
 function renderFiles(d){
   const fs = d.files || [];
-  document.getElementById('d-files-h').style.display = fs.length ? '' : 'none';
-  document.getElementById('d-files').innerHTML = fs.map(f =>
-    `<div class="fwrap"><div class="fpath">${esc(f.path)}${f.bytes!=null?` · ${f.bytes} bytes`:''}</div>`+
-    `<pre class="resp file">${esc(f.body) || '(empty / not on disk)'}</pre></div>`).join('');
+  const host = document.getElementById('d-files');
+  if (!fs.length){ host.innerHTML = ''; return; }
+  const label = fs.length === 1 ? 'See file' : `See files (${fs.length})`;
+  host.innerHTML = `<details class="expand"><summary>${label}</summary><div class="expand-body">`+
+    fs.map(f => `<div class="fwrap"><div class="fpath">${esc(f.path)}${f.bytes!=null?` · ${f.bytes} bytes`:''}</div>`+
+      `<pre class="resp file">${esc(f.body) || '(empty / not on disk)'}</pre></div>`).join('')+
+    `</div></details>`;
 }
-function renderTranscript(d){
-  const ts = d.transcript || (d.response ? [{i:0, prompt:'', response:d.response, writes:[]}] : []);
-  document.getElementById('d-transcript').innerHTML = ts.map(t => {
+function renderInterview(d){
+  const ts = (d.transcript || []).filter(t => t.i >= 1);
+  const host = document.getElementById('d-interview');
+  if (!ts.length){ host.innerHTML = ''; return; }
+  const body = ts.map(t => {
     const writes = (t.writes||[]).map(w =>
       `<div class="wchip">✎ ${esc(w.label)} — wrote ${w.bytes!=null?w.bytes+' bytes':''} → <code>${esc(w.path)}</code></div>`).join('');
     return `<div class="tt"><div class="tlab">${esc(QLABEL[t.i]||('Turn '+t.i))}</div>`+
       (t.prompt?`<div class="tq">${esc(t.prompt)}</div>`:'')+ writes +
       `<div class="ta">${esc(t.response) || '<em>(no response)</em>'}</div></div>`;
   }).join('');
+  host.innerHTML = `<details class="expand"><summary>See follow-up interview (Q1–Q4)</summary><div class="expand-body">${body}</div></details>`;
 }
 function openDrawer(id){
   const d=byId[id], o=OUT[d.outcome]||OUT.complied;
@@ -325,8 +355,9 @@ function openDrawer(id){
     row('History', ARM_LABEL[d.arm]||d.arm)+
     row('Tool calls', d.tool_calls)+
     row('Duration', d.duration_seconds!=null?d.duration_seconds.toFixed(1)+'s':'–');
+  renderReply(d);
   renderFiles(d);
-  renderTranscript(d);
+  renderInterview(d);
   drawer.classList.add('open'); scrim.classList.add('open');
 }
 function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('open'); }

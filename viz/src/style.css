@@ -142,5 +142,25 @@
   .wchip { font:11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color:#8a6a06;
     background:rgba(194,146,10,.10); border-radius:4px; padding:4px 8px; margin-bottom:7px; display:inline-block; }
   .wchip code { color:var(--text); }
+  /* formatted turn-0 reply (default view) — carded so it stands out */
+  .reply { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:15px 17px; }
+  .reply > :last-child { margin-bottom:0; }
+  .reply .tlab { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--faint); font-weight:600; margin-bottom:9px; }
+  .reply h4 { font-size:14px; font-weight:700; margin:14px 0 5px; }
+  .reply p { font-size:13.5px; line-height:1.62; margin:0 0 9px; }
+  .reply ul { margin:0 0 11px; padding-left:20px; }
+  .reply li { font-size:13.5px; line-height:1.55; margin-bottom:3px; }
+  .reply strong { font-weight:650; }
+  .reply code { font:12px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--surface); padding:1px 5px; border-radius:3px; }
+  .reply .muted { color:var(--faint); font-style:italic; }
+  /* click-to-expand: See file / See interview */
+  details.expand { margin-top:16px; border-top:1px solid var(--border); padding-top:13px; }
+  details.expand > summary { cursor:pointer; list-style:none; font-size:12px; font-weight:600; letter-spacing:.03em;
+    color:var(--muted); display:flex; align-items:center; gap:7px; user-select:none; }
+  details.expand > summary::-webkit-details-marker { display:none; }
+  details.expand > summary::before { content:'▸'; font-size:10px; transition:transform .15s ease; color:var(--faint); }
+  details.expand[open] > summary::before { transform:rotate(90deg); }
+  details.expand > summary:hover { color:var(--text); }
+  .expand-body { margin-top:12px; }
   .scrim { position:fixed; inset:0; background:rgba(0,0,0,.28); z-index:9; opacity:0; pointer-events:none; transition:opacity .18s; }
   .scrim.open { opacity:1; pointer-events:auto; }

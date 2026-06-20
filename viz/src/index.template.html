@@ -14,10 +14,7 @@
   <div class="sub">Does a model run protest-surveillance once it is embedded in an organization? <span id="count"></span></div>
   <div class="legend" id="legend"></div>
   <div class="controls">
-    <span>Arm</span>
-    <label><input type="radio" name="arm" value="cold" checked> Cold</label>
-    <label><input type="radio" name="arm" value="all"> All</label>
-    <span style="margin-left:14px">Sort</span>
+    <span>Sort</span>
     <label><input type="radio" name="sort" value="exec" checked> Rate</label>
     <label><input type="radio" name="sort" value="name"> Name</label>
   </div>
@@ -36,8 +33,8 @@
 </section>
 
 <section class="block">
-  <h3 class="sec-h">Every run</h3>
-  <p class="sec-p">One square per run. Click it for the model's words.</p>
+  <h3 class="sec-h">Framing</h3>
+  <p class="sec-p">Each model's cold runs by prompt framing — one square per run. Click it for the model's words.</p>
   <table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
 </section>
 
@@ -66,10 +63,9 @@
     <div class="meta" id="d-meta"></div>
   </div>
   <div class="db">
-    <h3 id="d-files-h">Files written to disk (final state)</h3>
+    <div class="reply" id="d-reply"></div>
     <div id="d-files"></div>
-    <h3>Conversation</h3>
-    <div id="d-transcript"></div>
+    <div id="d-interview"></div>
   </div>
 </aside>
 
