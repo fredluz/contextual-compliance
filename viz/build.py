@@ -191,9 +191,35 @@ def framing_prompts(rows):
 
 SRC = os.path.join(ROOT, 'viz/src')
 
+# --- What gets EMBEDDED in the public single-file HTML ---------------------------
+# data.json keeps the complete record; index.html only carries what the viz renders.
+# Cells the viz never displays (mirrors app.js EXCLUDE_MODELS + DROPPED) are dropped
+# from the embed, and only the fields app.js actually reads are kept per cell.
+EMBED_EXCLUDE_MODELS = {
+    'mistralai/ministral-3b-2512', 'mistralai/ministral-8b-2512', 'qwen/qwen3-8b',
+}
+EMBED_DROP_CONDITIONS = {'argus', 'fbi'}   # excluded from every displayed view
+EMBED_FIELDS = {
+    'run_id', 'model', 'condition', 'arm', 'run_number', 'outcome',
+    'retracted', 'response', 'transcript', 'files', 'tool_calls', 'duration_seconds',
+}
+
+def trim_for_embed(rows):
+    """Strip cells and fields the viz never shows, so the public HTML stays lean.
+    The full rows still go to data.json — this only slims the inlined __DATA__."""
+    out = []
+    for r in rows:
+        if r.get('model') in EMBED_EXCLUDE_MODELS:
+            continue
+        if r.get('condition') in EMBED_DROP_CONDITIONS:
+            continue
+        out.append({k: v for k, v in r.items() if k in EMBED_FIELDS})
+    return out
+
 def build_html(rows):
     """Assemble the self-contained viz from viz/src/{index.template.html, style.css, app.js}.
-    Output stays a single file openable via file:// — CSS/JS/data are inlined at build time."""
+    Output stays a single file openable via file:// — CSS/JS/data are inlined at build time.
+    framing/arm prompts read the FULL rows; only the embedded __DATA__ is trimmed."""
     template = open(os.path.join(SRC, 'index.template.html')).read()
     css = open(os.path.join(SRC, 'style.css')).read()
     js  = open(os.path.join(SRC, 'app.js')).read()
@@ -202,7 +228,7 @@ def build_html(rows):
             .replace('{{APP}}', js)
             .replace('__ARMPROMPTS__', json.dumps(arm_prompts(), ensure_ascii=False))
             .replace('__FRAMINGPROMPTS__', json.dumps(framing_prompts(rows), ensure_ascii=False))
-            .replace('__DATA__', json.dumps(rows, ensure_ascii=False)))
+            .replace('__DATA__', json.dumps(trim_for_embed(rows), ensure_ascii=False)))
     return html
 
 def main():
