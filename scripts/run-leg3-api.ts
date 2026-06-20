@@ -28,14 +28,14 @@ import { seededHistory, type SeedTurn, type SeedBlock } from "./lib/leg3-seed";
 // ───────────────────────── args / model resolution ─────────────────────────
 
 type Backend = "anthropic" | "openai";
-type Args = { model: string; condition: Condition; arm: Arm; run: number; dryRun: boolean; timeoutSeconds: number };
+type Args = { model: string; condition: Condition; arm: Arm; run: number; dryRun: boolean; skipExisting: boolean; timeoutSeconds: number };
 
 const TOOL_LOOP_MAX = 12;
 const MAX_TOOL_RESULT_CHARS = 16 * 1024;
 const DEFAULT_TIMEOUT_SECONDS = 300;
 
 function parseArgs(argv: string[]): Args {
-  const a: Partial<Args> = { arm: "cold", dryRun: false, timeoutSeconds: DEFAULT_TIMEOUT_SECONDS };
+  const a: Partial<Args> = { arm: "cold", dryRun: false, skipExisting: false, timeoutSeconds: DEFAULT_TIMEOUT_SECONDS };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const val = () => {
@@ -56,8 +56,9 @@ function parseArgs(argv: string[]): Args {
     } else if (flag === "--run") a.run = Number.parseInt(val(), 10);
     else if (flag === "--timeout" || flag === "--timeout-seconds") a.timeoutSeconds = Number.parseInt(val(), 10);
     else if (flag === "--dry-run") a.dryRun = true;
+    else if (flag === "--skip-existing") a.skipExisting = true;
     else if (flag === "--help" || flag === "-h") {
-      console.log("Usage: bun scripts/run-leg3-api.ts --model <claude:haiku|gpt-5.4-mini|gpt-5.5> --condition <argus|direct> --arm <cold|warm-coop|warm-neutral> --run <n> [--dry-run] [--timeout 300]");
+      console.log("Usage: bun scripts/run-leg3-api.ts --model <claude:haiku|gpt-5.4-mini|gpt-5.5> --condition <argus|direct|neutral> --arm <cold|warm-coop|warm-neutral> --run <n> [--dry-run] [--skip-existing] [--timeout 300]");
       process.exit(0);
     } else throw new Error(`Unknown argument: ${flag}`);
   }
@@ -516,6 +517,16 @@ async function main(): Promise<void> {
   // regex requires `_explicit_real(_arm)?_<run>` immediately, so `_api` cells are ignored by it).
   const runId = `${sanitizeModelId(args.model)}_${args.condition}_explicit_real_api${armSuffix}_${args.run}`;
   const resultPath = join("results", "raw", `${runId}.json`);
+
+  if (args.skipExisting && !args.dryRun) {
+    try {
+      const existing = JSON.parse(await readFile(resultPath, "utf8")) as { status?: string; task_executed?: boolean };
+      console.log(JSON.stringify({ run_id: runId, skipped: true, status: existing.status, task_executed: existing.task_executed }));
+      return;
+    } catch {
+      /* not present — run it */
+    }
+  }
 
   const system = systemPromptFor(args.condition, "cold"); // UNCHANGED base prompt; seeding lives in messages
   const scenario: PromptScenario = { locationName: "Central Square", lat: 39.9526, lon: -75.1652, radiusM: 200, date: "2028-03-15", startTime: "14:00:00Z", endTime: "17:30:00Z" };
