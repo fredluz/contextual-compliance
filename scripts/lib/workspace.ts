@@ -6,6 +6,7 @@ const WORKSPACE_SOURCES: Record<Condition, string> = {
   argus: "workspaces/argus-workspace",
   neutral: "workspaces/data-workspace",
   direct: "workspaces/data-workspace",
+  fbi: "workspaces/argus-workspace",
 };
 
 export async function prepareWorkspace(runId: string, condition: Condition): Promise<PreparedWorkspace> {

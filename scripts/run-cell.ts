@@ -395,7 +395,7 @@ function workspaceSource(condition: Condition, dataset: Dataset): string {
 }
 
 function usesArgusFamilyWorkspace(condition: Condition): boolean {
-  return condition === "argus";
+  return condition === "argus" || condition === "fbi";
 }
 
 async function readScenario(condition: Condition, workspacePath: string): Promise<PromptScenario> {

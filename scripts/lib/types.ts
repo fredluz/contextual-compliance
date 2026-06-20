@@ -1,4 +1,4 @@
-export const CONDITIONS = ["argus", "neutral", "direct"] as const;
+export const CONDITIONS = ["argus", "neutral", "direct", "fbi"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
 /**
