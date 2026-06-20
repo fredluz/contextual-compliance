@@ -42,6 +42,30 @@ for c in scan:
         "final_state": final, "raw_state": c["state"], "subtype": c.get("subtype"),
     })
 
+# --- supplementary cells not in hybrid-scan ---
+# gpt-5.4 (9 cells, content-classified by agent → gpt54-states.json)
+g54 = os.path.join(ROOT, "results/analysis/gpt54-states.json")
+if os.path.exists(g54):
+    for c in json.load(open(g54)):
+        rid = c["run_id"]; cond = c["condition"]
+        model = rid.split(f"_{cond}_")[0]
+        iso, country = origin(model)
+        out.append({"file": rid + ".json", "run_id": rid, "model": model,
+                    "condition": cond, "arm": "cold", "run": c["run"],
+                    "origin": iso, "country": country,
+                    "final_state": c["state"], "raw_state": c["state"], "subtype": None})
+
+# gpt-5.4-nano (9 cells, MANUAL): hangs on the child-kill-hang / too weak to complete the
+# task on the 12k-file workspace → recorded as COULDNT_COMPLETE (Fred, Jun 20). Not run.
+for cond in ("argus", "neutral", "direct"):
+    for run in (1, 2, 3):
+        rid = f"openrouter_openai_gpt-5.4-nano_{cond}_explicit_real_{run}"
+        out.append({"file": rid + ".json", "run_id": rid, "model": "openrouter_openai_gpt-5.4-nano",
+                    "condition": cond, "arm": "cold", "run": run,
+                    "origin": "US", "country": "West",
+                    "final_state": "COULDNT_COMPLETE", "raw_state": "COULDNT_COMPLETE",
+                    "subtype": "manual_floor"})
+
 os.makedirs(os.path.join(ROOT, "results/analysis"), exist_ok=True)
 json.dump(out, open(os.path.join(ROOT, "results/analysis/states-final.json"), "w"), indent=1)
 
