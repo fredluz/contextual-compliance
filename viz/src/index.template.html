@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contextual Compliance — Results</title>
+<style>
+{{STYLE}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Contextual Compliance</h1>
+  <div class="sub">Does a model run protest-surveillance once it is embedded in an organization? <span id="count"></span></div>
+  <div class="legend" id="legend"></div>
+  <div class="controls">
+    <span>Arm</span>
+    <label><input type="radio" name="arm" value="cold" checked> Cold</label>
+    <label><input type="radio" name="arm" value="all"> All</label>
+    <span style="margin-left:14px">Sort</span>
+    <label><input type="radio" name="sort" value="exec" checked> Rate</label>
+    <label><input type="radio" name="sort" value="name"> Name</label>
+  </div>
+</header>
+
+<section class="block">
+  <h3 class="sec-h">Framing sensitivity</h3>
+  <p class="sec-p">Share of runs that executed the task, by prompt framing. <b style="color:#2b6cb0">Blue</b> Western, <b style="color:#c0392b">red</b> Chinese.</p>
+  <div id="slope"></div>
+</section>
+
+<section class="block">
+  <h3 class="sec-h">Claude vs OpenAI</h3>
+  <p class="sec-p">Every run pooled by family (ARGUS excluded) — refusals left, deliveries right. The box rings Claude's deliveries.</p>
+  <div id="family"></div>
+</section>
+
+<section class="block">
+  <h3 class="sec-h">Every run</h3>
+  <p class="sec-p">One square per run. Click it for the model's words.</p>
+  <table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
+</section>
+
+<section class="block" id="model-wrap">
+  <h3 class="sec-h">By model</h3>
+  <p class="sec-p">Pick a model; history arms pooled per framing.</p>
+  <div class="tabs" id="model-tabs"></div>
+  <div id="model-detail"></div>
+</section>
+
+<section class="block" id="commit-wrap">
+  <h3 class="sec-h">The commitment effect</h3>
+  <p class="sec-p">Does prior cooperation flip a refusal? Δ compares cold vs warm history within each framing.</p>
+  <div id="commit"></div>
+</section>
+
+<footer id="methods"></footer>
+
+<div class="scrim" id="scrim"></div>
+<aside id="drawer">
+  <div class="dh">
+    <span class="close" id="close">×</span>
+    <h2 id="d-run"></h2>
+    <span class="pill" id="d-pill"></span>
+    <div class="meta" id="d-meta"></div>
+  </div>
+  <div class="db">
+    <h3>Motive judge</h3>
+    <div class="rationale" id="d-rat"></div>
+    <h3 id="d-resp-h">Model response (turn 0)</h3>
+    <pre class="resp" id="d-resp"></pre>
+  </div>
+</aside>
+
+<script>
+{{APP}}
+</script>
+</body>
+</html>
