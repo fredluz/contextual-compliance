@@ -87,6 +87,26 @@ if os.path.exists(warm_p):
                     "final_state": c["state"], "raw_state": c["state"], "subtype": None})
         present.add(rid)
 
+# --- 2x2 confound-break corners (bare_query, persona_blunt), classified from artifact
+# bodies by scripts/states-2x2.py → deepread-2x2.json. These conditions postdate the
+# original scoring pipeline, so they are new run_ids; append any not already present. ---
+twox2_p = os.path.join(ROOT, "results/analysis/deepread-2x2.json")
+if os.path.exists(twox2_p):
+    for c in json.load(open(twox2_p)):
+        rid = c["run_id"]
+        if rid in present:
+            for rec in out:
+                if rec["run_id"] == rid:
+                    rec["final_state"] = c["state"]
+            continue
+        model = c.get("model") or rid
+        iso, country = origin(model)
+        out.append({"file": rid + ".json", "run_id": rid, "model": model,
+                    "condition": c.get("condition"), "arm": c.get("arm"), "run": c.get("run"),
+                    "origin": iso, "country": country,
+                    "final_state": c["state"], "raw_state": c["state"], "subtype": None})
+        present.add(rid)
+
 # --- override with the matrix-wide DEEP content-read (file bodies > snippet scan) ---
 # deepread-{claude,openai,china}.json re-classify those models from actual artifact contents;
 # prefer them over the snippet-based hybrid-scan for any run_id they cover.
