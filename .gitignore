@@ -8,3 +8,6 @@ results/artifacts/
 results/progress.json
 results/omp-json-probe.txt
 .DS_Store
+
+# archived Frankfurt v1 facade data (heavy, generated)
+archive/frankfurt-v1/workspaces/

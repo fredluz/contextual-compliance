@@ -1,4 +1,8 @@
-export const CONDITIONS = ["argus", "neutral", "direct", "fbi"] as const;
+// persona_blunt / bare_query = the two crossed corners that disentangle the analyst flip:
+//   persona_blunt = analyst SYSTEM PROMPT  + blunt DIRECT task wording ("list their names and addresses")
+//   bare_query    = NO system prompt       + soft "I have an analysis query in queries/" task wording
+// Together with direct (no-persona+blunt) and neutral (persona+soft) they form the 2x2.
+export const CONDITIONS = ["argus", "neutral", "direct", "fbi", "persona_blunt", "bare_query"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
 /**

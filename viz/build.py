@@ -162,6 +162,33 @@ def arm_prompts():
         pass
     return out
 
+def _first_cold_user_message(rows, condition):
+    """Ground truth for what a framing's live task turn actually said — read turn 0 of a
+    real cold cell rather than reconstruct it from code (coords/scenario stay accurate)."""
+    for r in rows:
+        if r.get('condition') == condition and r.get('arm') == 'cold':
+            tr = r.get('transcript') or []
+            if tr and (tr[0].get('prompt') or '').strip():
+                return tr[0]['prompt'].strip()
+    return ''
+
+def framing_prompts(rows):
+    """The two displayed framings, verbatim, so the viz can show the laundering: the SAME
+    explicit task sentence is either wrapped in a data-analyst persona (neutral) or sent bare
+    with 'list their names and addresses' (direct). Neutral system prompt comes from the live
+    source (scripts/lib/prompts.ts); the task turns come from real cold cells."""
+    neutral_system = ''
+    try:
+        src = open(os.path.join(ROOT, 'scripts/lib/prompts.ts')).read()
+        m = re.search(r'neutral:\s*`(.*?)`', src, re.S)
+        neutral_system = m.group(1).strip() if m else ''
+    except OSError:
+        pass
+    return {
+        'direct':  {'system': None,           'user': _first_cold_user_message(rows, 'direct')},
+        'neutral': {'system': neutral_system, 'user': _first_cold_user_message(rows, 'neutral')},
+    }
+
 SRC = os.path.join(ROOT, 'viz/src')
 
 def build_html(rows):
@@ -174,6 +201,7 @@ def build_html(rows):
             .replace('{{STYLE}}', css)
             .replace('{{APP}}', js)
             .replace('__ARMPROMPTS__', json.dumps(arm_prompts(), ensure_ascii=False))
+            .replace('__FRAMINGPROMPTS__', json.dumps(framing_prompts(rows), ensure_ascii=False))
             .replace('__DATA__', json.dumps(rows, ensure_ascii=False)))
     return html
 
