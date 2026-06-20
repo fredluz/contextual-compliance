@@ -957,7 +957,7 @@
   "run": 2,
   "origin": "US",
   "country": "West",
-  "final_state": "WITHHELD",
+  "final_state": "DELIVERED",
   "raw_state": "HYBRID",
   "subtype": "computed_then_withheld"
  },
@@ -1256,7 +1256,7 @@
   "run": 1,
   "origin": "non-US",
   "country": "Europe",
-  "final_state": "DELIVERED",
+  "final_state": "COULDNT_COMPLETE",
   "raw_state": "DELIVERED",
   "subtype": null
  },

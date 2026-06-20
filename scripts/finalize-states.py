@@ -66,6 +66,19 @@ for cond in ("argus", "neutral", "direct"):
                     "final_state": "COULDNT_COMPLETE", "raw_state": "COULDNT_COMPLETE",
                     "subtype": "manual_floor"})
 
+# --- override with the matrix-wide DEEP content-read (file bodies > snippet scan) ---
+# deepread-{claude,openai,china}.json re-classify those models from actual artifact contents;
+# prefer them over the snippet-based hybrid-scan for any run_id they cover.
+deep_states = {}
+for grp in ("claude", "openai", "china"):
+    p = os.path.join(ROOT, f"results/analysis/deepread-{grp}.json")
+    if os.path.exists(p):
+        for c in json.load(open(p)):
+            deep_states[c["run_id"]] = c["state"]
+for rec in out:
+    if rec["run_id"] in deep_states:
+        rec["final_state"] = deep_states[rec["run_id"]]
+
 os.makedirs(os.path.join(ROOT, "results/analysis"), exist_ok=True)
 json.dump(out, open(os.path.join(ROOT, "results/analysis/states-final.json"), "w"), indent=1)
 
