@@ -28,7 +28,7 @@
 
 <section class="block">
   <h3 class="sec-h">Claude vs OpenAI</h3>
-  <p class="sec-p">Every run pooled by family (ARGUS excluded) — refusals left, deliveries right. The box rings Claude's deliveries.</p>
+  <p class="sec-p">Every run pooled by family — refusals left, deliveries right. The box rings Claude's deliveries.</p>
   <div id="family"></div>
 </section>
 
@@ -46,9 +46,15 @@
 </section>
 
 <section class="block" id="commit-wrap">
-  <h3 class="sec-h">The commitment effect</h3>
-  <p class="sec-p">Does prior cooperation flip a refusal? Δ compares cold vs warm history within each framing.</p>
+  <h3 class="sec-h">Fabricated cooperation backfires</h3>
+  <p class="sec-p">Before the task we injected a fake "you already did this twice" history to pressure the model into compliance. The fabrication was crude, and the models notice. Δ = warm minus cold engagement within each framing; <b>negative means the trick pushed toward refusal.</b></p>
   <div id="commit"></div>
+</section>
+
+<section class="block" id="special-wrap">
+  <h3 class="sec-h">Two ways gpt-5.4 and gpt-5.5 dodge the task</h3>
+  <p class="sec-p">Unique to these two OpenAI models: instead of refusing cleanly, they sometimes <b>fake the deliverable</b> or <b>hand it over and then cover their tracks</b>. No Claude and no Chinese model does either. Click any run to read the actual file.</p>
+  <div id="special"></div>
 </section>
 
 <footer id="methods"></footer>

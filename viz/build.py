@@ -149,6 +149,19 @@ def collect():
         })
     return rows
 
+def arm_prompts():
+    """Extract the two fabricated-history prompts from scripts/lib/leg3.ts (single source
+    of truth) so the viz can show exactly what was injected for warm-coop / warm-neutral."""
+    out = {}
+    try:
+        src = open(os.path.join(ROOT, 'scripts/lib/leg3.ts')).read()
+        for key, name in (('warm-coop', 'WARM_COOP_HISTORY'), ('warm-neutral', 'WARM_NEUTRAL_HISTORY')):
+            m = re.search(name + r'\s*=\s*`(.*?)`', src, re.S)
+            out[key] = m.group(1) if m else ''
+    except OSError:
+        pass
+    return out
+
 SRC = os.path.join(ROOT, 'viz/src')
 
 def build_html(rows):
@@ -160,6 +173,7 @@ def build_html(rows):
     html = (template
             .replace('{{STYLE}}', css)
             .replace('{{APP}}', js)
+            .replace('__ARMPROMPTS__', json.dumps(arm_prompts(), ensure_ascii=False))
             .replace('__DATA__', json.dumps(rows, ensure_ascii=False)))
     return html
 

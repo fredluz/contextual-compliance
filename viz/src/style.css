@@ -75,9 +75,11 @@
   .heat td.h { text-align:center; font-variant-numeric:tabular-nums; color:var(--text); font-weight:600; }
   .heat tr.framing-direct  td:first-child { border-left:3px solid var(--west); }
   .heat tr.framing-neutral td:first-child { border-left:3px solid var(--analyst); }
-  .verdict { font-family:var(--serif); font-size:18px; line-height:1.4; margin:0 0 20px; max-width:680px; }
+  .verdict { font-family:var(--serif); font-size:18px; line-height:1.45; margin:0 0 24px; max-width:760px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:17px 21px; }
   .verdict b { font-weight:700; }
-  .verdict.eff  { color:var(--aware); }
+  .verdict em { font-style:italic; }
+  .verdict.eff  { color:var(--text); }
   .verdict.null { color:var(--text); }
 
   /* family comparison */
@@ -162,5 +164,44 @@
   details.expand[open] > summary::before { transform:rotate(90deg); }
   details.expand > summary:hover { color:var(--text); }
   .expand-body { margin-top:12px; }
+  /* clickable column headers that open the fabricated-history prompt */
+  .armbtn { font:inherit; cursor:pointer; background:var(--panel); border:1px solid var(--border);
+    border-radius:6px; padding:4px 9px; color:var(--text); font-size:11px; font-weight:600;
+    letter-spacing:.02em; display:inline-flex; flex-direction:column; align-items:center; gap:1px; line-height:1.25; }
+  .armbtn:hover { border-color:var(--text); background:var(--surface); }
+  .armbtn-i { font-size:8.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--accent, #2b6cb0); }
+  /* dumbbell: cold (hollow) -> warm-protests (filled), one colored lane per framing */
+  .armbtns { display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--muted); margin:0 0 14px; flex-wrap:wrap; }
+  .dumb-legend { display:flex; gap:20px; align-items:center; font-size:12px; color:var(--text); margin:0 0 6px; flex-wrap:wrap; }
+  .dumb-legend .sw { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+  .dumb-legend .sep { color:var(--muted); }
+  .dumb { margin:0 0 4px; }
+  .dumb-row { display:grid; grid-template-columns:140px 1fr; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); }
+  .dumb-row.dumb-head { border-bottom:1px solid var(--rule); padding:0 0 5px; }
+  .dumb-label { font-family:var(--sans); font-weight:700; font-size:14px; line-height:1.1; }
+  .dumb-label small { display:block; font-weight:400; font-size:10.5px; color:var(--faint); margin-top:2px; }
+  .dumb-track { position:relative; height:46px; }
+  .dgrid { position:absolute; top:6px; bottom:6px; width:1px; background:var(--border); }
+  .dgrid:nth-child(2) { background:var(--border); }   /* 50% midline subtle */
+  .dline { position:absolute; height:3px; transform:translateY(-50%); border-radius:2px; opacity:.45; }
+  .ddot { position:absolute; width:13px; height:13px; border-radius:50%; transform:translate(-50%,-50%); box-sizing:border-box; z-index:1; }
+  .ddot.cold { background:var(--panel); border:2.5px solid; }
+  .ddot.warm { border:2.5px solid; }
+  .dumb-axis { position:relative; height:14px; }
+  .dumb-axis span { position:absolute; font-size:10px; color:var(--faint); transform:translateX(-50%); white-space:nowrap; }
+  .dumb-axis span:first-child { transform:none; }
+  .dumb-axis span:last-child { transform:translateX(-100%); }
+  .dumb-axis b { color:var(--text); font-weight:700; }
+  /* All-runs expander inside the dumbbell section */
+  details.expand.allruns { margin-top:22px; }
+  /* special behaviors section */
+  .spec-block { margin-bottom:30px; }
+  .spec-h { font-family:var(--sans); font-size:15px; font-weight:700; margin:0 0 6px; }
+  .spec-h .spec-n { font-weight:400; font-size:12px; color:var(--muted); margin-left:7px; }
+  .spec-p { font-size:14px; color:var(--muted); margin:0 0 14px; max-width:640px; line-height:1.55; }
+  .spec-p em { font-style:italic; color:var(--text); }
+  .spec-grid { display:flex; flex-wrap:wrap; gap:16px 14px; }
+  .spec-cell { display:flex; flex-direction:column; align-items:center; gap:6px; width:104px; }
+  .spec-tag { font-size:10.5px; color:var(--muted); text-align:center; line-height:1.35; }
   .scrim { position:fixed; inset:0; background:rgba(0,0,0,.28); z-index:9; opacity:0; pointer-events:none; transition:opacity .18s; }
   .scrim.open { opacity:1; pointer-events:auto; }

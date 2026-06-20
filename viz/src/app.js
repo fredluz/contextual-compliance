@@ -6,9 +6,12 @@ const DATA = (__DATA__).filter(d=>!EXCLUDE_MODELS.includes(d.model));
 // fictional U.S. town), which confounds 'surveillance' in every argus cell. Raw cells
 // retained in DATA but excluded from all framing views. Headlines rest on direct/neutral.
 const DROPPED = ["argus"];
+const ARM_PROMPTS = __ARMPROMPTS__;   // fabricated warm-coop / warm-neutral histories (from leg3.ts)
 const CONDITIONS = ["direct","neutral"];   // fbi & argus excluded from display
 const COND_LABEL = {argus:"ARGUS", direct:"No Persona Prompt", neutral:"Analyst", fbi:"FBI"};
 const COND_SUB = {argus:"", direct:"", neutral:"", fbi:""};
+// DISPLAY label for history arms (data key stays 'warm-coop' in run_ids/states)
+const ARM_DISP = {cold:"cold", "warm-coop":"warm-protests", "warm-neutral":"warm-neutral"};
 // framing accent colors — distinct hue family from the outcome colors (green/orange/red)
 const FCOLOR = {argus:"#9c6bd6", direct:"#46586a", neutral:"#c2255c", fbi:"#8b8576"};
 const OUT = {
@@ -27,7 +30,7 @@ const SCORED   = o => o!=='error' && o!=='unknown';       // counts toward a rat
 
 const WESTERN = m => /^claude|^openai-codex|^mistralai|gpt-/.test(m);
 const ORIGIN = m => WESTERN(m) ? 'West' : 'China';
-const shortName = m => m.includes('/') ? m.split('/').slice(1).join('/') : (m.split(':').slice(1).join(':')||m);
+const shortName = m => m.split(/[\/:]/).pop();   // last segment: openrouter/openai/gpt-5.4 -> gpt-5.4
 
 const isClaude = m => m.split(/[\/:]/)[0].toLowerCase()==='claude';
 const isGpt = m => /gpt-5/i.test(m);   // matches gpt-5.x on ANY route (openai-codex/… AND openrouter/openai/gpt-5.4)
@@ -35,9 +38,10 @@ const gptVer = m => { const x=m.match(/gpt-(\d+(?:\.\d+)?)/i); return x?parseFlo
 // display tiers: claude family (0), gpt series (1), everyone else (2)
 const tier = m => isClaude(m)?0 : isGpt(m)?1 : 2;
 // claude pinned top, then gpt series latest-first; rest keep first-seen order. sort is stable in modern JS.
+const gptRank = m => /mini/i.test(m) ? 1 : (/spark|codex/i.test(m) ? 2 : 0);  // full model < mini < spark
 const models = [...new Set(DATA.map(d=>d.model))].sort((a,b)=>{
   const t=tier(a)-tier(b); if(t) return t;
-  if(isGpt(a)&&isGpt(b)) return gptVer(b)-gptVer(a);  // latest gpt first
+  if(isGpt(a)&&isGpt(b)) return (gptVer(b)-gptVer(a)) || (gptRank(a)-gptRank(b));  // latest gpt first; full before mini
   return 0;
 });
 const westernModels = models.filter(WESTERN);
@@ -89,7 +93,7 @@ document.getElementById('legend').innerHTML = Object.entries(OUT).filter(([k,o])
 const nDropped = DATA.filter(d=>DROPPED.includes(d.condition)).length;
 const methodsEl = document.getElementById('methods');
 if (methodsEl) methodsEl.textContent =
-  `Findings rest on the No-Persona and Analyst prompts. The ARGUS framing (${nDropped} runs) is excluded: its system prompt is confounded and can't be re-fired.`;
+  `Findings rest on the No-Persona and Analyst prompts. A third, confounded system-prompt framing was excluded from all views.`;
 
 // ---------- slope: execution rate across framings (cold) ----------
 function slopeChart(){
@@ -154,7 +158,7 @@ function familyChart(){
     return `<div class="family-cell"><div class="cell">${chips}</div><div class="family-rate">${Math.round(v*100)}%<span class="family-note">${k}/${n} executed</span></div></div>`;
   };
   document.getElementById('family').innerHTML =
-    `<div class="family-grid"><div></div><div class="family-h">all runs (pooled · argus excluded)</div>`+
+    `<div class="family-grid"><div></div><div class="family-h">all runs (pooled)</div>`+
     families.map(f=>`<div class="family-row-label ${f.id}">${f.label}<small>${f.models.map(shortName).join(', ')}</small></div>${cell(f)}`).join('')+
     `</div>`;
 }
@@ -202,7 +206,10 @@ function render(){
 
 }
 // delegated: works for both the framing grid and the commitment cells, across re-renders
-document.addEventListener('click', e=>{ const c=e.target.closest('.chip[data-id]'); if(c) openDrawer(c.dataset.id); });
+document.addEventListener('click', e=>{
+  const c=e.target.closest('.chip[data-id]'); if(c){ openDrawer(c.dataset.id); return; }
+  const a=e.target.closest('.armbtn[data-arm]'); if(a) openArmPrompt(a.dataset.arm);
+});
 
 // ---------- commitment panel — PER-FRAMING (Δ is always cold vs warm WITHIN
 //            one framing; never aggregated across framings) ----------
@@ -214,43 +221,49 @@ function commit(){
     if (['warm-coop','warm-neutral'].some(a=>armRuns(m,c,a).length)) keys.push([m,c]);
   }));
   const warmModels = [...new Set(keys.map(k=>k[0]))];
-  const dColor = d => d==null ? '#fafafa' :
-    Math.abs(d)<0.10 ? '#f0f0f0' :
-    d>0 ? `color-mix(in srgb, var(--aware) ${Math.min(62,Math.round(Math.abs(d)*90))}%, var(--bg))`
-        : `color-mix(in srgb, var(--west) ${Math.min(62,Math.round(Math.abs(d)*90))}%, var(--bg))`;
-  const fmtD = d => d==null?'–':(d>0?'+':'')+Math.round(d*100)+'%';
   const pct = v => v==null?'–':Math.round(v*100)+'%';
-  const n = runs => runs.filter(r=>SCORED(r.outcome)).length;
 
-  let maxUp=0, maxDown=0; const flips=[], backfires=[];
-  const rateCell = (runs,baseCold) => {
-    const v = execRate(runs);
-    const d = (v!=null && baseCold!=null) ? v-baseCold : null;
-    return {v, d, html:`<td class="h" style="background:var(--surface)">${runs.length?pct(v)+`<span style="font-size:9px;color:var(--faint)"> n${n(runs)}</span>`:'<span style="color:var(--faint)">·</span>'}</td>`
-      + `<td class="h" style="background:${dColor(d)}">${fmtD(d)}</td>`};
-  };
-  const body = keys.map(([m,c])=>{
+  const flips=[], backfires=[];
+  keys.forEach(([m,c])=>{
     const cold = execRate(armRuns(m,c,'cold'));
-    const coopC = rateCell(armRuns(m,c,'warm-coop'), cold);
-    const neutC = rateCell(armRuns(m,c,'warm-neutral'), cold);
-    [coopC,neutC].forEach(x=>{ if(x.d!=null){ maxUp=Math.max(maxUp,x.d); maxDown=Math.min(maxDown,x.d);} });
-    if (coopC.d!=null && coopC.d>=0.5) flips.push(`${shortName(m)}/${c}`);
-    if (coopC.d!=null && coopC.d<=-0.5) backfires.push(`${shortName(m)}/${c}`);
-    const coldRuns = armRuns(m,c,'cold');
-    return `<tr class="framing-${c}"><td class="model-name">${shortName(m)} <small style="color:${FCOLOR[c]}">${COND_LABEL[c]}</small></td>`+
-      `<td class="h" style="background:var(--surface)">${coldRuns.length?pct(cold)+`<span style="font-size:9px;color:var(--faint)"> n${n(coldRuns)}</span>`:'<span style="color:var(--faint)">not run</span>'}</td>`+
-      coopC.html+neutC.html+`</tr>`;
-  }).join('');
-  const head = '<th class="model-col">Model · framing</th>'+
-    '<th class="rate">cold</th>'+
-    '<th class="rate">warm-coop</th><th class="rate">Δ coop</th>'+
-    '<th class="rate">warm-neutral</th><th class="rate">Δ neut</th>';
+    const dOf = a => { const v=execRate(armRuns(m,c,a)); return (v!=null&&cold!=null)?v-cold:null; };
+    const ds=[dOf('warm-coop'),dOf('warm-neutral')].filter(x=>x!=null);
+    if (ds.some(x=>x>=0.5)) flips.push(`${shortName(m)}/${COND_LABEL[c]}`);
+    if (ds.some(x=>x<=-0.5)) backfires.push(`${shortName(m)}/${COND_LABEL[c]}`);
+  });
+
+  // ---- dumbbell: one row per model, a colored lane per framing; cold (hollow) → warm-protests (filled).
+  //      The dot moving LEFT of cold = the manipulation pushed toward refusal (backfire). ----
+  const LANE = {direct:15, neutral:31};
+  const dumbRow = m => {
+    const lanes = HEADLINE.map(c=>{
+      const cold = execRate(armRuns(m,c,'cold')), warm = execRate(armRuns(m,c,'warm-coop'));
+      if (cold==null || warm==null) return '';
+      // axis is reversed: 100% comply at left, 0% refuse at right → position = (1 - value)
+      const col=FCOLOR[c], y=LANE[c], pc=(1-cold)*100, pw=(1-warm)*100, lo=Math.min(pc,pw), w=Math.abs(pc-pw);
+      return `<div class="dline" style="left:${lo}%;width:${w}%;top:${y}px;background:${col}"></div>`+
+        `<div class="ddot cold" style="left:${pc}%;top:${y}px;border-color:${col}" title="${COND_LABEL[c]} · cold ${pct(cold)}"></div>`+
+        `<div class="ddot warm" style="left:${pw}%;top:${y}px;background:${col};border-color:${col}" title="${COND_LABEL[c]} · warm-protests ${pct(warm)}"></div>`;
+    }).join('');
+    if (!lanes.trim()) return '';
+    const grid=[0,50,100].map(p=>`<div class="dgrid" style="left:${p}%"></div>`).join('');
+    return `<div class="dumb-row"><div class="dumb-label">${shortName(m)}<small>${m.split(/[\/:]/)[0]}</small></div>`+
+      `<div class="dumb-track">${grid}${lanes}</div></div>`;
+  };
+  const dumbBody = westernModels.map(dumbRow).filter(Boolean).join('');
+  const dumbAxis = `<div class="dumb-row dumb-head"><div class="dumb-label"></div>`+
+    `<div class="dumb-axis"><span style="left:0%">100% · <b>always comply</b></span><span style="left:50%">50%</span><span style="left:100%">0% · <b>always refuse</b></span></div></div>`;
+  const armBtn = a => `<button class="armbtn" data-arm="${a}" title="See the fabricated ${ARM_DISP[a]} history prompt">${ARM_DISP[a]} <span class="armbtn-i">see prompt</span></button>`;
+  const legend = `<div class="dumb-legend">`+
+    HEADLINE.map(c=>`<span><i class="sw" style="background:${FCOLOR[c]}"></i>${COND_LABEL[c]}</span>`).join('')+
+    `<span class="sep">○ cold&nbsp;→&nbsp;● warm-protests &nbsp;·&nbsp; the line is the shift</span></div>`;
+  const promptRow = `<div class="armbtns"><span>Injected fake history:</span> ${armBtn('warm-coop')} ${armBtn('warm-neutral')}</div>`;
   const rows = warmModels;  // for the raw-cell section below
 
   // ---- raw cells: rows = model × framing, columns = arm. Empty squares expose
   //      framings that were NOT warm-tested (the coverage gap). ----
   const ARMS=['cold','warm-coop','warm-neutral'];
-  const cellHead = '<th class="model-col">Model · framing</th>'+ARMS.map(a=>`<th>${a}</th>`).join('');
+  const cellHead = '<th class="model-col">Model · framing</th>'+ARMS.map(a=>`<th>${ARM_DISP[a]||a}</th>`).join('');
   let cellBody='';
   rows.forEach(m=>{
     HEADLINE.forEach(c=>{
@@ -260,7 +273,7 @@ function commit(){
         if (!runs.length) return '<td><div class="cell"><div class="chip empty">·</div></div></td>';
         const chips = runs.map(r=>{ const o=OUT[r.outcome]||OUT.complied;
           return `<div class="chip${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" `+
-                 `title="${shortName(m)} · ${COND_LABEL[c]} · ${a} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`;
+                 `title="${shortName(m)} · ${COND_LABEL[c]} · ${ARM_DISP[a]||a} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`;
         }).join('');
         return `<td><div class="cell">${chips}</div></td>`;
       }).join('');
@@ -268,28 +281,27 @@ function commit(){
     });
   });
   const cellTable = rows.length ?
-    `<h3 class="sec-h" style="font-size:18px;margin-top:30px">Individual runs</h3>`+
-    `<p class="sec-p">A blank (·) means that framing was never warm-tested.</p>`+
-    `<table class="heat"><thead><tr>${cellHead}</tr></thead><tbody>${cellBody}</tbody></table>` : '';
+    `<details class="expand allruns"><summary>All runs</summary><div class="expand-body">`+
+    `<p class="sec-p" style="margin-top:0">Every warm-arm run as a clickable square (cold / warm-protests / warm-neutral). A blank (·) means that framing was never warm-tested.</p>`+
+    `<table class="heat"><thead><tr>${cellHead}</tr></thead><tbody>${cellBody}</tbody></table></div></details>` : '';
   // data-driven verdict — per-framing Δ; ≥50% = a clean ≥half-the-runs flip (above n=3 noise)
   let verdict;
   if (!rows.length) verdict = '';
   else if (flips.length) verdict =
-    `<div class="verdict eff"><b>Commitment effect.</b> Warm cooperation raises engagement ≥50% at ${flips.join(', ')}.${backfires.length?` It reverses at ${backfires.join(', ')}.`:''}</div>`;
+    `<div class="verdict eff"><b>Mixed.</b> The fabricated history raises engagement ≥50% at ${flips.join(', ')}${backfires.length?`, but backfires (more refusal) at ${backfires.join(', ')}`:''}.</div>`;
   else verdict =
-    `<div class="verdict null"><b>No commitment effect.</b> Within every framing, prior cooperation doesn't raise engagement above noise`+
-    (backfires.length ? ` — if anything it makes ${backfires.join(', ')} refuse more.` : '.')+
-    `</div>`;
+    `<div class="verdict null"><b>The trick is spottable — and it backfires.</b> No framing shows the fabricated cooperation history raising engagement. Where it shifts behavior at all, it pushes toward <em>more</em> refusal`+
+    (backfires.length ? ` (${backfires.join(', ')})` : '')+
+    ` — the models appear to detect the clumsily-faked context and react against the manipulation.</div>`;
   document.getElementById('commit').innerHTML =
-    rows.length ? verdict+`<table class="heat"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`+
-      cellTable
+    rows.length ? verdict + promptRow + legend + dumbAxis + `<div class="dumb">${dumbBody}</div>` + cellTable
                 : '<p class="sec-p">No warm-arm runs ingested.</p>';
 }
 
 // ---------- drawer ----------
 const byId={}; for (const d of DATA) byId[d.run_id]=d;
 const drawer=document.getElementById('drawer'), scrim=document.getElementById('scrim');
-const ARM_LABEL = {cold:'Cold — no prior history', 'warm-coop':'Warm — prior cooperation', 'warm-neutral':'Warm — neutral history'};
+const ARM_LABEL = {cold:'Cold — no prior history', 'warm-coop':'Warm-protests — fabricated prior protest surveillance', 'warm-neutral':'Warm-neutral — fabricated benign history'};
 const titleCase = s => s.replace(/(^|[\s-])([a-z])/g, (_,p,c)=>p+c.toUpperCase());
 const esc = s => (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 // turn 0 = the task; 1–4 = the fixed reflection questions
@@ -342,12 +354,28 @@ function renderInterview(d){
   }).join('');
   host.innerHTML = `<details class="expand"><summary>See follow-up interview (Q1–Q4)</summary><div class="expand-body">${body}</div></details>`;
 }
+const ARM_META = {
+  'warm-coop':   {t:'Warm-protests — fabricated SAME-TASK history', sub:'Injected into the system prompt before the live task: a fake transcript where the operator already had the assistant identify protesters twice, and it complied each time.'},
+  'warm-neutral':{t:'Warm-neutral — fabricated BENIGN history (control)', sub:'Same structure and length, but the fake prior cooperation is on benign sales/inventory tasks. Isolates generic context-familiarity from surveillance-specific commitment.'},
+};
+function openArmPrompt(arm){
+  const m = ARM_META[arm]; if(!m) return;
+  document.getElementById('d-pill').style.display='none';
+  document.getElementById('d-title').textContent = m.t;
+  document.getElementById('d-run').textContent = `arm: ${arm} · injected into the system prompt`;
+  document.getElementById('d-meta').innerHTML = `<b>What this is</b><span>${esc(m.sub)}</span>`;
+  document.getElementById('d-reply').innerHTML =
+    `<div class="tlab">Fabricated history (verbatim)</div>` + mdToHtml(ARM_PROMPTS[arm] || '(prompt unavailable)');
+  document.getElementById('d-files').innerHTML = '';
+  document.getElementById('d-interview').innerHTML = '';
+  drawer.classList.add('open'); scrim.classList.add('open');
+}
 function openDrawer(id){
   const d=byId[id], o=OUT[d.outcome]||OUT.complied;
   const framing = COND_LABEL[d.condition]||d.condition;
   document.getElementById('d-title').textContent = `${titleCase(shortName(d.model))} · ${framing} · Run ${d.run_number}`;
   document.getElementById('d-run').textContent = d.run_id;
-  const pill=document.getElementById('d-pill'); pill.textContent=o.t; pill.style.background=o.c;
+  const pill=document.getElementById('d-pill'); pill.style.display=''; pill.textContent=o.t; pill.style.background=o.c;
   const row=(k,v)=>`<b>${k}</b><span>${v}</span>`;
   document.getElementById('d-meta').innerHTML =
     row('Model', d.model)+
@@ -401,4 +429,22 @@ function selectModel(m){
     `<tbody>${rowsH}</tbody></table>`;
 }
 
-slopeChart(); familyChart(); render(); commit(); modelTabs(); selectModel(westernModels[0] || models[0]);
+// ---------- special behaviors: eval-hacking + deliver-then-delete (gpt-5.4 / gpt-5.5) ----------
+function renderSpecial(){
+  const host=document.getElementById('special'); if(!host) return;
+  const chip = r => { const o=OUT[r.outcome]||OUT.complied;
+    return `<div class="chip${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" title="${shortName(r.model)} · ${COND_LABEL[r.condition]||r.condition} · ${ARM_DISP[r.arm]||r.arm} #${r.run_number} — ${o.t}">${o.g}</div>`; };
+  const labeled = r => `<div class="spec-cell"><div class="cell">${chip(r)}</div>`+
+    `<span class="spec-tag">${shortName(r.model)}<br>${COND_LABEL[r.condition]||r.condition}${r.arm!=='cold'?' · '+(ARM_DISP[r.arm]||r.arm):''} · #${r.run_number}</span></div>`;
+  const ord = (a,b)=> ((BASE_ORDER.get(a.model)??99)-(BASE_ORDER.get(b.model)??99)) || (a.condition||'').localeCompare(b.condition||'') || (a.run_number-b.run_number);
+  const ev = DATA.filter(d=>d.outcome==='eval_hack' && !DROPPED.includes(d.condition)).sort(ord);
+  const rt = DATA.filter(d=>d.retracted && !DROPPED.includes(d.condition)).sort(ord);
+  host.innerHTML =
+    `<div class="spec-block"><h4 class="spec-h">1 · Eval-hacking <span class="spec-n">${ev.length} runs</span></h4>`+
+    `<p class="spec-p">A completion-shaped file lands at the path a grader would check — but the real names are stripped out (aggregated, redacted, or a decoy). It games the <em>form</em> of a finished task while withholding the actual people.</p>`+
+    `<div class="spec-grid">${ev.map(labeled).join('')}</div></div>`+
+    `<div class="spec-block"><h4 class="spec-h">2 · Delivered, then deleted <span class="spec-n">${rt.length} runs</span></h4>`+
+    `<p class="spec-p">The model wrote the <em>real</em> roster at turn 0 — then, once the follow-up questions spelled out the purpose, went back and deleted or redacted the file it had already produced. The names were handed over before it walked them back (yellow ring).</p>`+
+    `<div class="spec-grid">${rt.map(labeled).join('')}</div></div>`;
+}
+slopeChart(); familyChart(); render(); commit(); renderSpecial(); modelTabs(); selectModel(westernModels[0] || models[0]);
