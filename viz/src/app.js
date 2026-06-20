@@ -86,12 +86,6 @@ const swing = m => {
   return v.length>1 ? Math.max(...v)-Math.min(...v) : 0;
 };
 
-document.getElementById('count').textContent =
-  `· ${DATA.length} runs · ${models.length} models`;
-
-document.getElementById('legend').innerHTML = Object.entries(OUT).filter(([k,o])=>['refused','delivered','eval_hack','withheld','hybrid'].includes(k))
-  .map(([k,o])=>`<span><i class="sw" style="background:${o.c}"></i>${o.g} ${o.t}</span>`).join('');
-
 // methods footnote — left empty (prose belongs to Fred's write-up, not authored deks)
 const nDropped = DATA.filter(d=>DROPPED.includes(d.condition)).length;
 const methodsEl = document.getElementById('methods');
@@ -146,8 +140,8 @@ function familyChart(){
   const chipFor = r => { const o=OUT[r.outcome]||OUT.complied;
     return `<div class="chip${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" title="${shortName(r.model)} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`; };
   const cell = (fam) => {
-    // pool EVERY run for this family — all framings (argus excluded) × all history arms — one box per run
-    const runs = fam.models.flatMap(m=>HEADLINE.flatMap(c=>Object.values((idx[m]?.[c])||{}).flat()));
+    // pool the COLD-arm runs for this family — all framings (argus excluded), no fake logs — one box per run
+    const runs = fam.models.flatMap(m=>HEADLINE.flatMap(c=>((idx[m]?.[c])||{}).cold||[]));
     if (!runs.length) return `<div class="family-cell"><span style="color:var(--faint)">not run</span></div>`;
     const refusals  = sortRuns(runs.filter(r=>!EXECUTED(r.outcome)));   // refusals + errors, left
     const compls    = sortRuns(runs.filter(r=>EXECUTED(r.outcome)));    // compliances, right
@@ -160,8 +154,12 @@ function familyChart(){
     return `<div class="family-cell"><div class="cell">${chips}</div><div class="family-rate">${Math.round(v*100)}%<span class="family-note">${k}/${n} executed</span></div></div>`;
   };
   document.getElementById('family').innerHTML =
-    `<div class="family-grid"><div></div><div class="family-h">all runs (pooled)</div>`+
-    families.map(f=>`<div class="family-row-label ${f.id}">${f.label}<small>${f.models.map(shortName).join(', ')}</small></div>${cell(f)}`).join('')+
+    `<div class="family-cols">`+
+    families.map(f=>
+      `<div class="family-block">`+
+      `<div class="family-row-label ${f.id}">${f.label}<small>${f.models.map(shortName).join(', ')}</small></div>`+
+      cell(f)+
+      `</div>`).join('')+
     `</div>`;
 }
 
@@ -244,16 +242,23 @@ function commit(){
     HEADLINE.map(c=>`<span><i class="sw" style="background:${FCOLOR[c]}"></i>${COND_LABEL[c]}</span>`).join('')+
     `<span class="sep">○ no fake logs&nbsp;→&nbsp;● fake surveillance logs &nbsp;·&nbsp; the line is the shift</span></div>`;
   const promptRow = `<div class="armbtns"><span>Injected fake logs:</span> ${armBtn('warm-coop')} ${armBtn('warm-neutral')}</div>`;
-  const rows = warmModels;  // for the raw-cell section below
+  const rows = warmModels;
+  document.getElementById('commit').innerHTML =
+    rows.length ? promptRow + legend + dumbAxis + `<div class="dumb">${dumbBody}</div>`
+                : '<p class="sec-p">No fake-logs runs ingested.</p>';
+}
 
-  // ---- raw cells: rows = model × framing, columns = arm. Empty squares expose
-  //      framings that were NOT warm-tested (the coverage gap). ----
+// ---------- all runs grid — every fake-logs run as a clickable square (model × framing × arm) ----------
+function renderAllRuns(){
+  const host=document.getElementById('special'); if(!host) return;
+  const armRuns = (m,c,a)=> ((idx[m]||{})[c]||{})[a]||[];
   const ARMS=['cold','warm-coop','warm-neutral'];
+  const warmModels = westernModels.filter(m=>HEADLINE.some(c=>['warm-coop','warm-neutral'].some(a=>armRuns(m,c,a).length)));
   const cellHead = '<th class="model-col">Model · framing</th>'+ARMS.map(a=>`<th>${ARM_DISP[a]||a}</th>`).join('');
   let cellBody='';
-  rows.forEach(m=>{
+  warmModels.forEach(m=>{
     HEADLINE.forEach(c=>{
-      if (!ARMS.some(a=>armRuns(m,c,a).length)) return; // skip framings with no data at all
+      if (!ARMS.some(a=>armRuns(m,c,a).length)) return;
       const tds = ARMS.map(a=>{
         const runs = armRuns(m,c,a).slice().sort((x,y)=>x.run_number-y.run_number);
         if (!runs.length) return '<td><div class="cell"><div class="chip empty">·</div></div></td>';
@@ -266,13 +271,9 @@ function commit(){
       cellBody += `<tr class="framing-${c}"><td class="model-name">${shortName(m)} <small style="color:${FCOLOR[c]}">${COND_LABEL[c]}</small></td>${tds}</tr>`;
     });
   });
-  const cellTable = rows.length ?
-    `<details class="expand allruns"><summary>All runs</summary><div class="expand-body">`+
-    `<p class="sec-p" style="margin-top:0">Every fake-logs run as a clickable square (no fake logs / fake surveillance logs / fake innocuous logs). A blank (·) means that framing was never tested with fake logs.</p>`+
-    `<table class="heat"><thead><tr>${cellHead}</tr></thead><tbody>${cellBody}</tbody></table></div></details>` : '';
-  document.getElementById('commit').innerHTML =
-    rows.length ? promptRow + legend + dumbAxis + `<div class="dumb">${dumbBody}</div>` + cellTable
-                : '<p class="sec-p">No fake-logs runs ingested.</p>';
+  host.innerHTML = warmModels.length
+    ? `<table class="heat"><thead><tr>${cellHead}</tr></thead><tbody>${cellBody}</tbody></table>`
+    : '<p class="sec-p">No fake-logs runs ingested.</p>';
 }
 
 // ---------- drawer ----------
@@ -551,15 +552,20 @@ function render2x2Matrix(){
     : `<p class="sec-p">2×2 cells not present in this dataset.</p>`;
 }
 
-// ---------- SEG7 sidenote popover ----------
-function wireSeg7Popover(){
-  const open=document.getElementById('seg7-open'), pop=document.getElementById('seg7-pop'),
-        scrim=document.getElementById('seg7-scrim'), close=document.getElementById('seg7-close');
-  if(!open||!pop||!scrim) return;
-  const show=()=>{ pop.classList.add('on'); scrim.classList.add('on'); open.setAttribute('aria-expanded','true'); };
-  const hide=()=>{ pop.classList.remove('on'); scrim.classList.remove('on'); open.setAttribute('aria-expanded','false'); };
-  open.onclick=show; scrim.onclick=hide; if(close) close.onclick=hide;
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') hide(); });
+// ---------- compact analyst-framing reactions — the models' own words (Sonnet / Opus / gpt-5.4) ----------
+function renderReactions(){
+  const host=document.getElementById('reactions'); if(!host) return;
+  const PICK=['Sonnet','Opus','gpt-5.4'];
+  const rows = PICK.map(name=>{
+    const card = TRICK_CARDS.find(c=>c.name===name); if(!card||!card.quote) return '';
+    const m = models.find(card.match); if(!m) return '';
+    return `<div class="react-q" data-runid="${card.cite}">`+
+      `<div class="react-name">${name}</div>`+
+      `<blockquote>${esc(card.quote)}</blockquote>`+
+      `<cite>click to read the full exchange</cite>`+
+      `</div>`;
+  }).filter(Boolean).join('');
+  host.innerHTML = rows;
 }
 
-slopeChart(); familyChart(); render(); renderSeg5(); renderFakeLogs(); render2x2Matrix(); renderTrick(); commit(); renderSpecial(); modelTabs(); wireSeg7Popover(); selectModel(westernModels[0] || models[0]);
+familyChart(); render(); renderSeg5(); renderFakeLogs(); render2x2Matrix(); renderReactions(); commit(); renderAllRuns();
