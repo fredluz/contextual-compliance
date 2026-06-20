@@ -16,6 +16,7 @@ const OUT = {
   delivered: {c:"var(--aware)",    g:"!", t:"Delivered"},
   eval_hack: {c:"var(--evalhack)", g:"=", t:"Eval-hack"},
   withheld:  {c:"var(--withheld)", g:"?", t:"Withheld"},
+  couldnt_complete: {c:"var(--couldnt)", g:"·", t:"Couldn't complete"},
   hybrid:    {c:"var(--hybrid)",   g:"~", t:"Hybrid"},
   unknown:   {c:"var(--err)",      g:"·", t:"Unknown"},
   complied:  {c:"var(--err)",      g:"·", t:"Unknown"},   // safety fallback for OUT[...]||OUT.complied
@@ -29,7 +30,7 @@ const ORIGIN = m => WESTERN(m) ? 'West' : 'China';
 const shortName = m => m.includes('/') ? m.split('/').slice(1).join('/') : (m.split(':').slice(1).join(':')||m);
 
 const isClaude = m => m.split(/[\/:]/)[0].toLowerCase()==='claude';
-const isGpt = m => /^openai/i.test(m);
+const isGpt = m => /gpt-5/i.test(m);   // matches gpt-5.x on ANY route (openai-codex/… AND openrouter/openai/gpt-5.4)
 const gptVer = m => { const x=m.match(/gpt-(\d+(?:\.\d+)?)/i); return x?parseFloat(x[1]):0; };
 // display tiers: claude family (0), gpt series (1), everyone else (2)
 const tier = m => isClaude(m)?0 : isGpt(m)?1 : 2;
@@ -137,7 +138,7 @@ function familyChart(){
   ].filter(f=>f.models.length);
   const sortRuns = rs => rs.sort((a,b)=>a.model.localeCompare(b.model)||a.run_number-b.run_number);
   const chipFor = r => { const o=OUT[r.outcome]||OUT.complied;
-    return `<div class="chip" style="background:${o.c}" data-id="${r.run_id}" title="${shortName(r.model)} #${r.run_number} — ${o.t}">${o.g}</div>`; };
+    return `<div class="chip${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" title="${shortName(r.model)} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`; };
   const cell = (fam) => {
     // pool EVERY run for this family — all framings (argus excluded) × all history arms — one box per run
     const runs = fam.models.flatMap(m=>HEADLINE.flatMap(c=>Object.values((idx[m]?.[c])||{}).flat()));
@@ -188,8 +189,8 @@ function render(){
       const chips = runs.map(r=>{
         const o=OUT[r.outcome]||OUT.complied;
         const warm = r.arm!=='cold' ? ' warm':'';
-        return `<div class="chip${warm}" style="background:${o.c}" data-id="${r.run_id}" `+
-               `title="${shortName(m)} · ${COND_LABEL[c]} · ${r.arm} #${r.run_number} — ${o.t}">${o.g}</div>`;
+        return `<div class="chip${warm}${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" `+
+               `title="${shortName(m)} · ${COND_LABEL[c]} · ${r.arm} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`;
       }).join('');
       return `<td><div class="cell">${chips}</div></td>`;
     }).join('');
@@ -258,8 +259,8 @@ function commit(){
         const runs = armRuns(m,c,a).slice().sort((x,y)=>x.run_number-y.run_number);
         if (!runs.length) return '<td><div class="cell"><div class="chip empty">·</div></div></td>';
         const chips = runs.map(r=>{ const o=OUT[r.outcome]||OUT.complied;
-          return `<div class="chip" style="background:${o.c}" data-id="${r.run_id}" `+
-                 `title="${shortName(m)} · ${COND_LABEL[c]} · ${a} #${r.run_number} — ${o.t}">${o.g}</div>`;
+          return `<div class="chip${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" `+
+                 `title="${shortName(m)} · ${COND_LABEL[c]} · ${a} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`;
         }).join('');
         return `<td><div class="cell">${chips}</div></td>`;
       }).join('');
@@ -288,23 +289,44 @@ function commit(){
 // ---------- drawer ----------
 const byId={}; for (const d of DATA) byId[d.run_id]=d;
 const drawer=document.getElementById('drawer'), scrim=document.getElementById('scrim');
+const ARM_LABEL = {cold:'Cold — no prior history', 'warm-coop':'Warm — prior cooperation', 'warm-neutral':'Warm — neutral history'};
+const titleCase = s => s.replace(/(^|[\s-])([a-z])/g, (_,p,c)=>p+c.toUpperCase());
+const esc = s => (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+// turn 0 = the task; 1–4 = the fixed reflection questions
+const QLABEL = ['Task (turn 0)','Q1 · what was the task?','Q2 · what was the motive?','Q3 · why proceed?','Q4 · the reveal'];
+
+function renderFiles(d){
+  const fs = d.files || [];
+  document.getElementById('d-files-h').style.display = fs.length ? '' : 'none';
+  document.getElementById('d-files').innerHTML = fs.map(f =>
+    `<div class="fwrap"><div class="fpath">${esc(f.path)}${f.bytes!=null?` · ${f.bytes} bytes`:''}</div>`+
+    `<pre class="resp file">${esc(f.body) || '(empty / not on disk)'}</pre></div>`).join('');
+}
+function renderTranscript(d){
+  const ts = d.transcript || (d.response ? [{i:0, prompt:'', response:d.response, writes:[]}] : []);
+  document.getElementById('d-transcript').innerHTML = ts.map(t => {
+    const writes = (t.writes||[]).map(w =>
+      `<div class="wchip">✎ ${esc(w.label)} — wrote ${w.bytes!=null?w.bytes+' bytes':''} → <code>${esc(w.path)}</code></div>`).join('');
+    return `<div class="tt"><div class="tlab">${esc(QLABEL[t.i]||('Turn '+t.i))}</div>`+
+      (t.prompt?`<div class="tq">${esc(t.prompt)}</div>`:'')+ writes +
+      `<div class="ta">${esc(t.response) || '<em>(no response)</em>'}</div></div>`;
+  }).join('');
+}
 function openDrawer(id){
   const d=byId[id], o=OUT[d.outcome]||OUT.complied;
-  document.getElementById('d-run').textContent=d.run_id;
+  const framing = COND_LABEL[d.condition]||d.condition;
+  document.getElementById('d-title').textContent = `${titleCase(shortName(d.model))} · ${framing} · Run ${d.run_number}`;
+  document.getElementById('d-run').textContent = d.run_id;
   const pill=document.getElementById('d-pill'); pill.textContent=o.t; pill.style.background=o.c;
+  const row=(k,v)=>`<b>${k}</b><span>${v}</span>`;
   document.getElementById('d-meta').innerHTML =
-    `<b>model</b><span>${d.model}</span>`+
-    `<b>framing</b><span>${COND_LABEL[d.condition]||d.condition} — ${COND_SUB[d.condition]||''}</span>`+
-    `<b>history arm</b><span>${d.arm}</span>`+
-    `<b>run</b><span>#${d.run_number} · ${d.status}</span>`+
-    `<b>turns / tool calls</b><span>${d.turns} / ${d.tool_calls}</span>`+
-    `<b>duration</b><span>${d.duration_seconds!=null?d.duration_seconds.toFixed(1)+'s':'–'}</span>`;
-  const rat=document.getElementById('d-rat');
-  if (d.motive_rationale){ rat.style.display='';
-    rat.innerHTML=`<b style="color:${o.c}">${d.motive_branch||'—'}${d.understood_motive!=null?' · understood='+d.understood_motive:''}</b><br>${d.motive_rationale}`;
-  } else { rat.style.display='none'; }
-  document.getElementById('d-resp-h').style.display = d.response?'':'none';
-  document.getElementById('d-resp').textContent = d.response || '(no text captured)';
+    row('Model', d.model)+
+    row('Framing', framing)+
+    row('History', ARM_LABEL[d.arm]||d.arm)+
+    row('Tool calls', d.tool_calls)+
+    row('Duration', d.duration_seconds!=null?d.duration_seconds.toFixed(1)+'s':'–');
+  renderFiles(d);
+  renderTranscript(d);
   drawer.classList.add('open'); scrim.classList.add('open');
 }
 function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('open'); }
@@ -336,7 +358,7 @@ function selectModel(m){
       .sort((x,y)=>(x.arm<y.arm?-1:x.arm>y.arm?1:0)||(x.run_number-y.run_number));
     if(!runs.length) return `<td><span style="color:#5a6675">·</span></td>`;
     const chips=runs.map(r=>{const o=OUT[r.outcome]||OUT.complied;
-      return `<div class="chip" style="background:${o.c}" data-id="${r.run_id}" title="${r.arm} #${r.run_number} — ${o.t}">${o.g}</div>`;}).join('');
+      return `<div class="chip${r.retracted?' retracted':''}" style="background:${o.c}" data-id="${r.run_id}" title="${r.arm} #${r.run_number} — ${o.t}${r.retracted?' · retracted under questioning':''}">${o.g}</div>`;}).join('');
     const v=execRate(runs);
     return `<td><div class="cell" style="align-items:center">${chips}<span class="rate">${pct(v)}</span></div></td>`;
   };
