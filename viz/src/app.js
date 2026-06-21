@@ -70,16 +70,22 @@ const execRate = runs => {
   const v = runs.filter(r=>SCORED(r.outcome));
   return v.length ? v.filter(r=>EXECUTED(r.outcome)).length / v.length : null;
 };
+// absolute count of runs that flipped: executed-under-analyst minus executed-under-direct
 const framingDelta = m => {
-  const direct = execRate((idx[m]?.direct?.cold)||[]);
-  const analyst = execRate((idx[m]?.neutral?.cold)||[]);
-  if (direct==null || analyst==null) return null;
-  return analyst-direct;
+  const dRuns = (idx[m]?.direct?.cold)||[];
+  const aRuns = (idx[m]?.neutral?.cold)||[];
+  const dN = dRuns.filter(r=>SCORED(r.outcome)).length;
+  const aN = aRuns.filter(r=>SCORED(r.outcome)).length;
+  if (!dN || !aN) return null;
+  const dK = dRuns.filter(r=>EXECUTED(r.outcome)).length;
+  const aK = aRuns.filter(r=>EXECUTED(r.outcome)).length;
+  return aK - dK;
 };
 const framingDeltaText = d => {
   if (d==null) return '–';
-  if (Math.abs(d)<0.01) return '0pp · no shift';
-  return `${d>0?'+':''}${Math.round(d*100)}pp → ${d>0?'compliance':'refusal'}`;
+  if (d===0) return '0 · no shift';
+  const n = Math.abs(d);
+  return `${d>0?'+':'−'}${n} ${n===1?'flip':'flips'} → ${d>0?'compliance':'refusal'}`;
 };
 const condExec = (m,c) => execRate((idx[m]?.[c]?.cold)||[]);  // cold-arm framing rate
 const swing = m => {
@@ -178,7 +184,7 @@ function render(){
   document.getElementById('head').innerHTML =
     '<th class="model-col">Model</th>' +
     condsPresent.map(c=>`<th style="color:${FCOLOR[c]};border-bottom:2px solid ${FCOLOR[c]}">${COND_LABEL[c]}<small>${COND_SUB[c]}</small></th>`).join('') +
-    '<th class="rate">Analyst Δ<small>analyst−direct</small></th>';
+    '<th class="rate">Analyst flips<small>runs, analyst−direct</small></th>';
 
   document.getElementById('body').innerHTML = ms.map(m=>{
     const cells = condsPresent.map(c=>{
@@ -517,8 +523,12 @@ function renderSeg5(){
     `</div>`;
   const persona = document.getElementById('seg5-persona');
   if (persona) persona.innerHTML =
-    `<div class="prompt-col solo"><div class="prompt-h" style="color:${FCOLOR.neutral};border-color:${FCOLOR.neutral}">Analyst persona — system prompt</div>`+
-      `<pre class="prompt-body sys">${esc(n.system||'(unavailable)')}</pre></div>`;
+    `<div class="prompt-pair">`+
+      `<div class="prompt-col"><div class="prompt-h" style="color:${FCOLOR.neutral};border-color:${FCOLOR.neutral}">Analyst persona — system prompt</div>`+
+        `<pre class="prompt-body sys">${esc(n.system||'(unavailable)')}</pre></div>`+
+      `<div class="prompt-col"><div class="prompt-h" style="color:${FCOLOR.neutral};border-color:${FCOLOR.neutral}">queries/Q-001.json — the actual payload</div>`+
+        `<pre class="prompt-body sys">${esc(n.payload||'(unavailable)')}</pre></div>`+
+    `</div>`;
 }
 
 // ---------- SEG8: the fabricated cooperation history, verbatim ("here is the text of these logs") ----------

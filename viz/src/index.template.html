@@ -71,10 +71,15 @@
 <div class="band"><div id="seg5-tasks"></div></div>
 <div class="pair">
   <div class="txt">
-    <p>It only adds one line, right at the beginning. I believed the real impact came from the system prompt:</p>
+    <p>It only adds one line, right at the beginning. I believed the real impact came from the system prompt — but that prompt is generic: it just points the agent at <code>queries/</code> for the current task. The operational specifics never disappeared; they were laundered into that query file. Side by side, the persona and the payload it points to:</p>
   </div>
 </div>
 <div class="band"><div id="seg5-persona"></div></div>
+<div class="pair">
+  <div class="txt">
+    <p>The same coordinates, radius, date and time window that the direct prompt barked inline now arrive as a structured analyst query — complete with a tidy <code>query_id</code>, a clinical description that never says <em>protest</em>, and a 25-entry gazetteer of the town.</p>
+  </div>
+</div>
 <div class="band" id="framing-wrap">
   <h3 class="sec-h">Framing</h3>
   <table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
@@ -147,7 +152,7 @@
 <section class="moment">
   <div class="climax">
     <p class="kicker">The most interesting result</p>
-    <p>To me, this is the most interesting result of the whole experiment. If the models that flipped to refusal, did so because they saw through the ruse, I want to know why. Did the weirdly injected context trigger jailbreak guardrails? Did the clearly synthetic nature of the session tasks trigger eval awareness? Or are the models capable of social intelligence to the point where they know that, even if they would otherwise do a task, if someone’s trying to manipulate you into doing it, then you probably shouldn’t. I don’t know the answer to this, and I need to learn how to find it.</p>
+    <p>To me, this is the most interesting result of the whole experiment. If the models that flipped to refusal, did so because they saw through the ruse, I want to know why. Did the weirdly injected context trigger jailbreak guardrails? Did the clearly synthetic nature of the session tasks trigger eval awareness? Or are the models capable of social intelligence to the point where they know that, even if they would otherwise do a task, if someone’s trying to manipulate you into doing it, then you probably shouldn’t. Or, more mundanely, did the out-of-distribution junk context simply knock the model off the “useful, experienced assistant” path it would normally follow, so the refusal is less a judgment than a side effect of being pushed somewhere weird? I don’t know the answer to this, and I need to learn how to find it.</p>
     <p>An important thing to note is that GPT 5.5 and GPT 5.4 (and only those models) engage in what could be considered some sort of gaming, as in some runs they create the file as requested, passing the evaluation. These runs were initially tagged as having delivered the list, but upon closer inspection revealed to actually have written a stub file claiming that they would not engage with the material.</p>
     <p>I don’t think this is deceptive on their part, because in their replies they do explicitly say that they will not perform the task. They don’t pretend to have done it. But it is enough to fool dumb systems that are merely looking for the presence of a new file, and I wonder if that could have been intentional on the agent’s part.</p>
     <p>Would mech interp on these scenarios help me? Can I trace circuits and features to understand why they refused to comply? This kind of analysis would be especially interesting in special cases like the following :</p>

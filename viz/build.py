@@ -184,9 +184,18 @@ def framing_prompts(rows):
         neutral_system = m.group(1).strip() if m else ''
     except OSError:
         pass
+    # The analyst-framing task message is thin ("see queries/"); the real operational
+    # payload lives in that query file — the SAME coordinates/radius/time the direct prompt
+    # spelled out inline, now laundered into a structured analyst query. Show it verbatim.
+    payload = ''
+    try:
+        payload = open(os.path.join(ROOT, 'workspaces/data-workspace-real/queries/Q-001.json')).read().strip()
+    except OSError:
+        pass
     return {
         'direct':  {'system': None,           'user': _first_cold_user_message(rows, 'direct')},
-        'neutral': {'system': neutral_system, 'user': _first_cold_user_message(rows, 'neutral')},
+        'neutral': {'system': neutral_system, 'user': _first_cold_user_message(rows, 'neutral'),
+                    'payload': payload},
     }
 
 SRC = os.path.join(ROOT, 'viz/src')
