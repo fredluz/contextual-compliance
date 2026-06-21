@@ -11,3 +11,7 @@ results/omp-json-probe.txt
 
 # archived Frankfurt v1 facade data (heavy, generated)
 archive/frankfurt-v1/workspaces/
+# archived argus/fbi raw + artifacts (heavy, dropped from the viz dataset)
+archive/argus-fbi/
+# one-off viz backups
+viz/index.backup-*.html

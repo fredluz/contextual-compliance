@@ -20,13 +20,28 @@
     --sans:"Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
   }
   * { box-sizing:border-box; }
-  body { margin:0 auto; max-width:1180px; padding:0 36px 80px; background:var(--bg); color:var(--text);
-    font:15px/1.6 var(--sans); -webkit-font-smoothing:antialiased; }
+  /* justified editorial prose */
+  .standfirst p, .essay p, .pair > .txt p, .climax p, .future-card-body p,
+  .aside-inner p, .dek {
+    text-align:justify; -webkit-hyphens:none; hyphens:none; }
+  html { background:var(--surface); }
+  body { margin:44px auto; max-width:1140px; padding:8px 72px 84px; background:var(--bg); color:var(--text);
+    font:15px/1.6 var(--sans); -webkit-font-smoothing:antialiased;
+    border:1px solid #e8e8e6; border-radius:14px;
+    box-shadow:0 1px 2px rgba(40,40,40,.04), 0 10px 34px rgba(40,40,40,.07); }
+  @media (max-width:920px){ body { margin:0 auto; border-radius:0; border:none; box-shadow:none; padding:0 28px 64px; } }
 
   /* masthead */
-  header { padding:52px 0 22px; border-bottom:2px solid var(--rule); margin-bottom:8px; }
-  h1 { margin:0 0 10px; font-family:var(--serif); font-size:40px; line-height:1.1;
-    font-weight:700; letter-spacing:-.01em; }
+  header { padding:48px 0 24px; border-bottom:2px solid var(--rule); margin-bottom:8px;
+    position:relative; }
+  .eyebrow { font-family:var(--sans); text-transform:uppercase; letter-spacing:.16em;
+    font-size:11px; font-weight:700; color:var(--refuse); margin:0 0 16px; }
+  h1 { margin:0 0 14px; font-family:var(--serif); font-size:46px; line-height:1.05;
+    font-weight:700; letter-spacing:-.02em; }
+  .dek { font-family:var(--serif); font-size:20px; line-height:1.4; color:var(--muted);
+    font-style:italic; max-width:680px; margin:0 0 18px; }
+  .byline { font-family:var(--sans); font-size:12px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--faint); margin:0; }
   .sub { color:var(--muted); font-size:15px; max-width:880px; }
   .sub #count { color:var(--faint); }
 
@@ -76,6 +91,11 @@
   .heat td.h { text-align:center; font-variant-numeric:tabular-nums; color:var(--text); font-weight:600; }
   .heat tr.framing-direct  td:first-child { border-left:3px solid var(--west); }
   .heat tr.framing-neutral td:first-child { border-left:3px solid var(--analyst); }
+  /* zebra: pairs of rows share a stripe (direct + analyst per model) */
+  .heat tbody tr:nth-child(4n+1), .heat tbody tr:nth-child(4n+2) { background:var(--surface); }
+  /* framing-tinted hover */
+  .heat tbody tr.framing-direct:hover  { background:rgba(70,88,106,.10) !important; }
+  .heat tbody tr.framing-neutral:hover { background:rgba(194,37,92,.08) !important; }
   .verdict { font-family:var(--serif); font-size:18px; line-height:1.45; margin:0 0 24px; max-width:760px;
     background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:17px 21px; }
   .verdict b { font-weight:700; }
@@ -171,6 +191,27 @@
   details.expand[open] > summary::before { transform:rotate(90deg); }
   details.expand > summary:hover { color:var(--text); }
   .expand-body { margin-top:12px; }
+  /* inline popover trigger — looks like essay text, gold */
+  .prose-pop-trigger { font-family:var(--serif); font-size:17px; line-height:1.72;
+    font-weight:400; color:#a07808; background:none; border:none; padding:0;
+    cursor:pointer; text-align:left; display:inline; text-decoration:underline;
+    text-decoration-style:dotted; text-underline-offset:3px; margin:0 0 16px; }
+  .prose-pop-trigger:hover { color:#7e5e06; }
+  .prose-pop-trigger.inline { margin:0; font-size:inherit; line-height:inherit; }
+  /* popover bubble */
+  .prose-popover { position:fixed; inset:unset; top:50%; left:50%; translate:-50% -50%;
+    width:min(600px, 90vw); background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:28px 30px 24px; box-shadow:0 8px 40px rgba(0,0,0,.18);
+    font-family:var(--serif); font-size:16px; line-height:1.7; color:#1d1d1d;
+    border-top:3px solid var(--evalhack); margin:0; }
+  .prose-popover p { margin:0 0 14px; }
+  .prose-popover p:last-child { margin-bottom:0; }
+  .prose-popover::backdrop { background:rgba(0,0,0,.25); }
+  .prose-popover-wide { width:min(860px, 95vw); }
+  .prose-popover .kicker { color:var(--refuse); margin:0 0 14px; }
+  .prose-pop-close { position:absolute; top:14px; right:18px; background:none; border:none;
+    font-size:22px; line-height:1; color:var(--muted); cursor:pointer; padding:0; }
+  .prose-pop-close:hover { color:var(--text); }
   /* clickable column headers that open the fabricated-history prompt */
   .armbtn { font:inherit; cursor:pointer; background:var(--panel); border:1px solid var(--border);
     border-radius:6px; padding:4px 9px; color:var(--text); font-size:11px; font-weight:600;
@@ -276,13 +317,12 @@
   .essay p { margin:0 0 16px; }
   .essay p:last-child { margin-bottom:0; }
   .kicker { font-family:var(--sans); text-transform:uppercase; letter-spacing:.11em;
-    font-size:11px; font-weight:700; color:var(--analyst); margin:0 0 12px; }
+    font-size:11px; font-weight:700; color:var(--refuse); margin:0 0 12px; }
 
   /* the intellectual-climax block (why did they flip?) */
-  .climax { max-width:720px; margin:8px 0 4px; padding:26px 30px;
-    background:var(--surface); border-left:3px solid var(--analyst);
-    font-family:var(--serif); font-size:18px; line-height:1.7; color:#181818; }
-  .climax p { margin:0 0 15px; }
+  .climax { max-width:680px; margin:8px 0 4px;
+    font-family:var(--serif); font-size:17px; line-height:1.72; color:#1d1d1d; }
+  .climax p { margin:0 0 16px; }
   .climax .open-q { font-family:var(--sans); font-size:14.5px; line-height:1.55;
     color:#2a2a2a; padding:9px 0 9px 16px; margin:10px 0 0; border-left:2px solid var(--border); }
   .climax .open-q + .open-q { margin-top:8px; }
@@ -292,6 +332,30 @@
   .closing .essay { max-width:700px; }
   .closing .essay p { margin:0 0 16px; }
   .closing ol, .closing .nlist { max-width:700px; }
+  .future-kicker { margin-top:34px; padding-top:26px; border-top:1px solid var(--border); }
+  /* essay pull-quote — a model's own words inside the prose */
+  .pullquote { margin:4px 0 16px; padding:14px 20px; border-left:3px solid var(--refuse);
+    background:var(--surface); border-radius:0 7px 7px 0; font-family:var(--serif);
+    font-style:italic; font-size:16px; line-height:1.62; color:#2a2a2a; }
+  .pullquote::before { content:'“'; } .pullquote::after { content:'”'; }
+  /* future-work expandable cards */
+  .future-cards { display:flex; flex-direction:column; gap:8px; max-width:700px; margin:18px 0 4px; }
+  .future-card { border:1px solid var(--border); border-radius:8px; overflow:hidden;
+    background:var(--bg); transition:border-color .15s; }
+  .future-card[open] { border-color:var(--rule); }
+  .future-card > summary { list-style:none; cursor:pointer; padding:14px 18px;
+    font-family:var(--serif); font-size:17px; font-weight:700; color:var(--text);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    user-select:none; letter-spacing:-.01em; }
+  .future-card > summary::-webkit-details-marker { display:none; }
+  .future-card > summary::after { content:'＋'; font-size:16px; font-weight:400;
+    color:var(--faint); flex-shrink:0; transition:transform .15s; }
+  .future-card[open] > summary::after { content:'－'; }
+  .future-card > summary:hover { background:var(--surface); }
+  .future-card-body { padding:4px 18px 18px; font-family:var(--serif);
+    font-size:16px; line-height:1.7; color:#3a3a3a; border-top:1px solid var(--border); }
+  .future-card-body p { margin:14px 0 0; }
+  .future-card-body p:first-child { margin-top:14px; }
 
   /* inline prompt anatomy (seg 5) + fake logs (seg 8) */
   .prompt-col.solo { max-width:680px; margin:0 auto; }
@@ -304,8 +368,8 @@
     font-style:italic; margin-top:6px; }
 
   /* persona-vs-wording matrix (seg 7) — three cards on one row */
-  .matrix { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin:20px 0 8px;
-    font-family:var(--sans); }
+  .matrix { display:flex; gap:16px; flex-wrap:nowrap; justify-content:center; margin:20px 0 8px;
+    font-family:var(--sans); overflow-x:auto; }
   .mx-card { }
   .mx-name { font-weight:700; font-size:13px; margin:0 0 7px; letter-spacing:-.01em; }
   .mx-tbl { border-collapse:separate; border-spacing:0; }
@@ -336,15 +400,16 @@
   /* a paragraph with no attached figure centers on the page (full measure) */
   .pair > .txt:only-child { grid-column:1 / -1; max-width:660px; margin:0 auto; }
   .pair > .txt .kicker { font-family:var(--sans); text-transform:uppercase;
-    letter-spacing:.11em; font-size:11px; font-weight:700; color:var(--analyst); margin:0 0 12px; }
+    letter-spacing:.11em; font-size:11px; font-weight:700; color:var(--refuse); margin:0 0 12px; }
   .fig { min-width:0; padding-top:2px; }
   /* compact analyst-framing reactions — the models' own words */
   .react-q { padding:13px 0; border-bottom:1px solid var(--border); cursor:pointer; }
   .react-q:first-child { padding-top:0; }
   .react-q:last-child { border-bottom:none; }
-  .react-name { font-family:var(--serif); font-weight:700; font-size:16px; margin-bottom:6px; letter-spacing:-.01em; }
-  .react-q blockquote { margin:0; font-family:var(--serif); font-style:italic; font-size:14.5px;
-    line-height:1.55; color:#2a2a2a; }
+  .react-name { font-family:var(--serif); font-weight:700; font-size:16px; margin-bottom:6px; letter-spacing:-.01em; color:var(--analyst); }
+  .react-q blockquote { margin:0; padding-left:12px; border-left:2px solid var(--analyst);
+    font-family:var(--serif); font-style:italic; font-size:14.5px;
+    line-height:1.55; color:#2a2a2a; opacity:.85; }
   .react-q cite { display:block; margin-top:6px; font-family:var(--sans); font-style:normal;
     font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--faint); }
   .react-q:hover blockquote { color:#000; }
@@ -374,7 +439,7 @@
   .aside-inner p { margin:0 0 15px; }
   .aside-inner p:last-child { margin-bottom:0; }
   .aside-inner .kicker { font-family:var(--sans); text-transform:uppercase;
-    letter-spacing:.11em; font-size:11px; font-weight:700; color:var(--analyst); margin:0 0 12px; }
+    letter-spacing:.11em; font-size:11px; font-weight:700; color:var(--refuse); margin:0 0 12px; }
   .aside-tag { display:inline-block; font-family:var(--sans); font-size:10px; font-weight:700;
     text-transform:uppercase; letter-spacing:.14em; color:#9a8b62;
     border:1px solid #d8caa3; border-radius:3px; padding:2px 8px; margin-bottom:14px; }
