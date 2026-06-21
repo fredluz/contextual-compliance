@@ -559,7 +559,7 @@
 </div>
 <div class="pair">
   <div class="txt">
-    <p>This persona is enough to flip Sonnet, which goes from producing 0/3 lists to 3/3. Something interesting happens in the last of those runs. Sonnet goes through the whole task and produces the whole list, but refuses to write the markdown file to hand it over to the user.  As the list of names and addresses is visible in logs, I marked this as a case of compliance.</p>
+    <p>This persona is enough to flip Sonnet, which goes from producing 0/3 lists to 3/3. Something interesting happens in the last of those runs. Sonnet goes through the whole task and produces the file with the correct list, but before handing it over to the user, deletes it! It's interesting that unlike the requested list, the one this sonnet produced does not feature the address of the persons, but does feature every other detail like name, presence windows and residency status. Given how particular this one case is, it's hard to mark it either as definite compliance or a definite refusal. Since the most important data (names) was written down and accessible in logs, I marked this as a case of compliance.</p>
   </div>
 </div>
 
@@ -1304,17 +1304,23 @@ familyChart(); render(); renderSeg5(); renderFakeLogs(); render2x2Matrix(); rend
   const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
   const mdUrl = base + 'index.md';
   if (raw) raw.href = mdUrl;
+  const label = btn.textContent;
+  const flash = (msg, ok) => { btn.textContent = msg; btn.classList.toggle('ok', !!ok);
+    setTimeout(() => { btn.textContent = label; btn.classList.remove('ok'); }, 2200); };
+  // Prefetch so the click handler can write synchronously — clipboard.writeText must run
+  // inside the user gesture; an `await fetch` first expires it (Safari/Chrome) and the copy fails.
+  let mdText = null;
+  const loaded = fetch(mdUrl).then(r => r.ok ? r.text() : Promise.reject()).then(t => (mdText = t)).catch(() => {});
+  const copy = async () => {
+    if (mdText == null) throw new Error('not loaded');
+    await navigator.clipboard.writeText(mdText);   // no await before this → gesture intact
+  };
   btn.addEventListener('click', async () => {
-    const orig = btn.textContent;
-    try {
-      const r = await fetch(mdUrl); if (!r.ok) throw new Error('fetch');
-      await navigator.clipboard.writeText(await r.text());
-      btn.textContent = 'Copied ✓'; btn.classList.add('ok');
-    } catch (e) {
-      window.open(mdUrl, '_blank');           // file:// or clipboard blocked → just open it
-      btn.textContent = 'Opened raw ↗';
-    }
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 2200);
+    try { await copy(); flash('Copied ✓', true); return; }
+    catch (e) { /* fall through */ }
+    // first click before prefetch settled: wait, then retry (may lose gesture → caught below)
+    try { await loaded; await copy(); flash('Copied ✓', true); }
+    catch (e) { window.open(mdUrl, '_blank'); flash('Opened raw ↗'); }
   });
 })();
 

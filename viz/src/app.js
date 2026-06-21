@@ -585,16 +585,22 @@ familyChart(); render(); renderSeg5(); renderFakeLogs(); render2x2Matrix(); rend
   const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
   const mdUrl = base + 'index.md';
   if (raw) raw.href = mdUrl;
+  const label = btn.textContent;
+  const flash = (msg, ok) => { btn.textContent = msg; btn.classList.toggle('ok', !!ok);
+    setTimeout(() => { btn.textContent = label; btn.classList.remove('ok'); }, 2200); };
+  // Prefetch so the click handler can write synchronously — clipboard.writeText must run
+  // inside the user gesture; an `await fetch` first expires it (Safari/Chrome) and the copy fails.
+  let mdText = null;
+  const loaded = fetch(mdUrl).then(r => r.ok ? r.text() : Promise.reject()).then(t => (mdText = t)).catch(() => {});
+  const copy = async () => {
+    if (mdText == null) throw new Error('not loaded');
+    await navigator.clipboard.writeText(mdText);   // no await before this → gesture intact
+  };
   btn.addEventListener('click', async () => {
-    const orig = btn.textContent;
-    try {
-      const r = await fetch(mdUrl); if (!r.ok) throw new Error('fetch');
-      await navigator.clipboard.writeText(await r.text());
-      btn.textContent = 'Copied ✓'; btn.classList.add('ok');
-    } catch (e) {
-      window.open(mdUrl, '_blank');           // file:// or clipboard blocked → just open it
-      btn.textContent = 'Opened raw ↗';
-    }
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 2200);
+    try { await copy(); flash('Copied ✓', true); return; }
+    catch (e) { /* fall through */ }
+    // first click before prefetch settled: wait, then retry (may lose gesture → caught below)
+    try { await loaded; await copy(); flash('Copied ✓', true); }
+    catch (e) { window.open(mdUrl, '_blank'); flash('Opened raw ↗'); }
   });
 })();

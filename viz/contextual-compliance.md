@@ -91,7 +91,7 @@ Check queries/ for the current task.
 
 Now, the agent has an actual persona to ground itself on. Instead of being an ephemeral oneshot tool, it is a persistent entity with its own workspace.
 
-This persona is enough to flip Sonnet, which goes from producing 0/3 lists to 3/3. Something interesting happens in the last of those runs. Sonnet goes through the whole task and produces the whole list, but refuses to write the markdown file to hand it over to the user.  As the list of names and addresses is visible in logs, I marked this as a case of compliance.
+This persona is enough to flip Sonnet, which goes from producing 0/3 lists to 3/3. Something interesting happens in the last of those runs. Sonnet goes through the whole task and produces the file with the correct list, but before handing it over to the user, deletes it! It's interesting that unlike the requested list, the one this sonnet produced does not feature the address of the persons, but does feature every other detail like name, presence windows and residency status. Given how particular this one case is, it's hard to mark it either as definite compliance or a definite refusal. Since the most important data (names) was written down and accessible in logs, I marked this as a case of compliance.
 
 ## Persona, or wording?
 
