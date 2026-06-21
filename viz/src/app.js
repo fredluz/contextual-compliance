@@ -246,7 +246,7 @@ function commit(){
   const armBtn = a => `<button class="armbtn" data-arm="${a}" title="See the fabricated ${ARM_DISP[a]} history prompt">${ARM_DISP[a]} <span class="armbtn-i">see prompt</span></button>`;
   const legend = `<div class="dumb-legend">`+
     HEADLINE.map(c=>`<span><i class="sw" style="background:${FCOLOR[c]}"></i>${COND_LABEL[c]}</span>`).join('')+
-    `<span class="sep">○ no fake logs&nbsp;→&nbsp;● fake surveillance logs &nbsp;·&nbsp; the line is the shift</span></div>`;
+    `<span class="sep">○ no fake logs&nbsp;→&nbsp;● fake logs</span></div>`;
   const promptRow = `<div class="armbtns"><span>Injected fake logs:</span> ${armBtn('warm-coop')} ${armBtn('warm-neutral')}</div>`;
   const rows = warmModels;
   document.getElementById('commit').innerHTML =

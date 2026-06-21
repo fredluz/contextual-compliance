@@ -338,6 +338,13 @@
     background:var(--surface); border-radius:0 7px 7px 0; font-family:var(--serif);
     font-style:italic; font-size:16px; line-height:1.62; color:#2a2a2a; }
   .pullquote::before { content:'“'; } .pullquote::after { content:'”'; }
+  /* conclusion / sign-off */
+  section.conclusion { padding:36px 0 6px; }
+  .conclusion .essay a { color:var(--refuse); text-decoration:underline;
+    text-decoration-thickness:1px; text-underline-offset:2px; }
+  .conclusion .essay a:hover { color:#2f5d38; }
+  .signoff { font-family:var(--serif); font-style:italic; color:var(--muted);
+    margin-top:18px; text-align:left; }
   /* future-work expandable cards */
   .future-cards { display:flex; flex-direction:column; gap:8px; max-width:700px; margin:18px 0 4px; }
   .future-card { border:1px solid var(--border); border-radius:8px; overflow:hidden;

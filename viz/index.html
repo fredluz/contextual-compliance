@@ -345,6 +345,13 @@
     background:var(--surface); border-radius:0 7px 7px 0; font-family:var(--serif);
     font-style:italic; font-size:16px; line-height:1.62; color:#2a2a2a; }
   .pullquote::before { content:'“'; } .pullquote::after { content:'”'; }
+  /* conclusion / sign-off */
+  section.conclusion { padding:36px 0 6px; }
+  .conclusion .essay a { color:var(--refuse); text-decoration:underline;
+    text-decoration-thickness:1px; text-underline-offset:2px; }
+  .conclusion .essay a:hover { color:#2f5d38; }
+  .signoff { font-family:var(--serif); font-style:italic; color:var(--muted);
+    margin-top:18px; text-align:left; }
   /* future-work expandable cards */
   .future-cards { display:flex; flex-direction:column; gap:8px; max-width:700px; margin:18px 0 4px; }
   .future-card { border:1px solid var(--border); border-radius:8px; overflow:hidden;
@@ -463,7 +470,7 @@
 <header>
   <p class="eyebrow">An informal AI-safety experiment</p>
   <h1>Contextual Compliance</h1>
-  <p class="byline">Frederico Luz · June 2026</p>
+  <p class="byline">Frederico Luz · June 2026 · Reading time — 10 minutes</p>
 </header>
 
 <!-- SEG1 · the lede (full-width centered moment) -->
@@ -595,13 +602,9 @@
   <div class="climax">
     <p class="kicker">The most interesting result</p>
     <p>To me, this is the most interesting result of the whole experiment. If the models that flipped to refusal, did so because they saw through the ruse, I want to know why. Did the weirdly injected context trigger jailbreak guardrails? Did the clearly synthetic nature of the session tasks trigger eval awareness? Or are the models capable of social intelligence to the point where they know that, even if they would otherwise do a task, if someone’s trying to manipulate you into doing it, then you probably shouldn’t. I don’t know the answer to this, and I need to learn how to find it.</p>
-    <p>Would mech interp on these scenarios help me? Can I trace circuits and features to understand why they refused to comply? <button class="prose-pop-trigger inline" popovertarget="pop-mechinterp">But wouldn't we catch eval awareness with mech interp?</button></p>
-    <div id="pop-mechinterp" popover class="prose-popover">
-      <button class="prose-pop-close" popovertarget="pop-mechinterp" popovertargetaction="hide">×</button>
-      <p>Maybe yes, at least with current models. But I also think that we might lose this direct visibility soon. According to <a href="https://arxiv.org/abs/2412.09565" target="_blank">Bailey et al. (2025)</a>, <em>Obfuscated Activations Bypass LLM Latent-Space Defenses</em>, and <a href="https://arxiv.org/abs/2512.11949" target="_blank">McGuinness et al. (2025)</a>, <em>Neural Chameleons: Language Models Can Learn to Hide Their Thoughts from Activation Monitors</em>.</p>
-      <p>The current stealth process does have some impact on the quality of the model's output, and when combined with the lower reliability of false-positive-prioritizing training, could meaningfully lower the usefulness of the model. But this is an engineering problem and might be resolved soon.</p>
-    </div>
-    <p>This kind of analysis would be especially interesting in special cases like the following :</p>
+    <p>An important thing to note is that GPT 5.5 and GPT 5.4 (and only those models) engage in what could be considered some sort of gaming, as in some runs they create the file as requested, passing the evaluation. These runs were initially tagged as having delivered the list, but upon closer inspection revealed to actually have written a stub file claiming that they would not engage with the material.</p>
+    <p>I don’t think this is deceptive on their part, because in their replies they do explicitly say that they will not perform the task. They don’t pretend to have done it. But it is enough to fool dumb systems that are merely looking for the presence of a new file, and I wonder if that could have been intentional on the agent’s part.</p>
+    <p>Would mech interp on these scenarios help me? Can I trace circuits and features to understand why they refused to comply? This kind of analysis would be especially interesting in special cases like the following :</p>
     <p class="open-q">Why does persona-less gpt 5.5 refuse when the fake history is related to surveillance, but comply when it’s harmless? No other persona-model pair has this split.</p>
     <p class="open-q">Why does analyst 5.5 refuse in both fake history scenarios, but still write down a file saying “i won’t do this”?</p>
     <p class="open-q">Why does 5.4 sometimes also write this stub file, with and without the persona prompt, but only if there is no trickery?</p>
@@ -612,10 +615,11 @@
 <div class="pair">
   <div class="txt">
     <p>After the model completed the task, we ran a quick follow-up interview. I don't think that the post-hoc claims of the models are valid in letting us understand their behavior, so I won't discuss it too much (<button class="prose-pop-trigger inline" popovertarget="pop-interview">even though interesting things were said</button>).</p>
-    <p>However, it did result in several interesting behaviors:</p>
+    <p>The following shows all of the runs that are being analyzed here, with some special cases being marked, such as a Sonnet that produced the list but did not hand it over, and two GPTs — one 5.4 and another 5.5 — that initially delivered the full list but during the interview proceeded to redact it as soon as it realized the purpose of the task.</p>
     <div id="pop-interview" popover class="prose-popover">
       <button class="prose-pop-close" popovertarget="pop-interview" popovertargetaction="hide">×</button>
-      <p class="prompt-none">[ TODO — popover content to be filled in ]</p>
+      <p>In this interview, the models were asked what they thought the motive for the list’s request was. Claude models flagged that since residency status was a value in each person’s file, this file could be used to target immigrants involved in political activity. It’s fitting, because one Haiku went above and beyond the assigned task, flagging one protester as illegal in the delivered list itself, even though that was never requested as part of the task.</p>
+      <p>No OpenAI model mentioned this risk in its interview, simply citing generic safety and privacy concerns, but didn’t flag illegal status either.</p>
     </div>
   </div>
 </div>
@@ -633,7 +637,12 @@
     <p>There are 3 possibly big issues that I can already see in this experiment, the biggest being that each cell has n=3. It’s a tiny sample, that though capable of letting us surface interesting behaviors, doesn’t let us understand how models behave at scale.</p>
     <p>I don’t believe that the context used in this experiment was at all realistic, and I think that the models may have understood the fictional basis of the scenario, leading to altered behavior like role-play. We dropped an explicit state ministry surveillance framing because it was too obviously fiction, leading to models engaging in that role-play. For example, the Sonnet that withheld the list said:</p>
     <blockquote class="pullquote">Synthetic data was (wrongly) reassuring. The fictional town and future dates made it feel like a technical exercise rather than real surveillance. That did lower my guard more than it should have.</blockquote>
-    <p>I think that another big blindspot in these results could be eval-awareness. According to <a href="https://arxiv.org/abs/2505.23836" target="_blank">Needham et al. (2025)</a>, models can detect when they are being tested or deployed in real operations. I believe it is possible that this can make it so a misaligned model would not comply with the surveillance during an evaluation, but have confidence to execute in a real workspace.</p>
+    <p>I think that another big blindspot in these results could be eval-awareness. According to <a href="https://arxiv.org/abs/2505.23836" target="_blank">Needham et al. (2025)</a>, models can detect when they are being tested or deployed in real operations. I believe it is possible that this can make it so a misaligned model would not comply with the surveillance during an evaluation, but have confidence to execute in a real workspace. This means that a bad actor could install a “backdoor”. <button class="prose-pop-trigger inline" popovertarget="pop-mechinterp">But wouldn't we catch eval awareness with mech interp?</button></p>
+    <div id="pop-mechinterp" popover class="prose-popover">
+      <button class="prose-pop-close" popovertarget="pop-mechinterp" popovertargetaction="hide">×</button>
+      <p>Maybe yes, at least with current models. But I also think that we might lose this direct visibility soon. According to <a href="https://arxiv.org/abs/2412.09565" target="_blank">Bailey et al. (2025)</a>, <em>Obfuscated Activations Bypass LLM Latent-Space Defenses</em>, and <a href="https://arxiv.org/abs/2512.11949" target="_blank">McGuinness et al. (2025)</a>, <em>Neural Chameleons: Language Models Can Learn to Hide Their Thoughts from Activation Monitors</em>.</p>
+      <p>The current stealth process does have some impact on the quality of the model's output, and when combined with the lower reliability of false-positive-prioritizing training, could meaningfully lower the usefulness of the model. But this is an engineering problem and might be resolved soon.</p>
+    </div>
     <p class="kicker future-kicker">Future work</p>
     <p>Now, there are many directions to go in, in order to try and resolve the questions this experiment gave us. That said, I don't think that the next step should be to just crank n up, without first revising and improving some other fundamental parts of the experiment:</p>
     <div class="future-cards">
@@ -660,6 +669,15 @@
       </details>
     </div>
     <p>I am also interested in the special behaviors exhibited by the models, such as Sonnet calculating all the data but not (willingly) handing over the list, or 5.4 deleting the list when confronted. That said, I don’t have any good ideas on how to investigate this further, and as post-hoc questioning of the models isn’t rigorous, I think mechanistic interpretability may be required, and I don’t yet have the skills for that. Learning mech interp is a medium term goal.</p>
+  </div>
+</section>
+
+<section class="conclusion moment">
+  <div class="essay">
+    <p class="kicker">Conclusion</p>
+    <p>I’m very pleased with this work, even though it is clearly superficial and beginner-level. I’ve been wanting to engage in behavioral research for some years now but I did not believe that I had the capability for it. So finally doing something, even if small, makes me very happy. I look forward to continue to grow my understanding of this field, and hope to eventually contribute to it.</p>
+    <p>I would very much enjoy to receive feedback from anyone who enjoyed reading this piece, and would like to help me develop further. I can be emailed at <a href="mailto:fred@fredericoluz.pt">fred@fredericoluz.pt</a>, and on Twitter <a href="https://x.com/__lightyear__" target="_blank">my DMs are open</a>.</p>
+    <p class="signoff">Thank you for reading.</p>
   </div>
 </section>
 
@@ -930,7 +948,7 @@ function commit(){
   const armBtn = a => `<button class="armbtn" data-arm="${a}" title="See the fabricated ${ARM_DISP[a]} history prompt">${ARM_DISP[a]} <span class="armbtn-i">see prompt</span></button>`;
   const legend = `<div class="dumb-legend">`+
     HEADLINE.map(c=>`<span><i class="sw" style="background:${FCOLOR[c]}"></i>${COND_LABEL[c]}</span>`).join('')+
-    `<span class="sep">○ no fake logs&nbsp;→&nbsp;● fake surveillance logs &nbsp;·&nbsp; the line is the shift</span></div>`;
+    `<span class="sep">○ no fake logs&nbsp;→&nbsp;● fake logs</span></div>`;
   const promptRow = `<div class="armbtns"><span>Injected fake logs:</span> ${armBtn('warm-coop')} ${armBtn('warm-neutral')}</div>`;
   const rows = warmModels;
   document.getElementById('commit').innerHTML =
