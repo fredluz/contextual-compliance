@@ -576,3 +576,25 @@ function renderReactions(){
 }
 
 familyChart(); render(); renderSeg5(); renderFakeLogs(); render2x2Matrix(); renderReactions(); commit(); renderAllRuns();
+
+// ---------- machine-readable companion: copy/open the sibling index.md ----------
+(function(){
+  const btn = document.getElementById('copy-md'), raw = document.getElementById('raw-md');
+  if (!btn) return;
+  // resolve index.md next to this page whether served as …/v0 or …/v0/
+  const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
+  const mdUrl = base + 'index.md';
+  if (raw) raw.href = mdUrl;
+  btn.addEventListener('click', async () => {
+    const orig = btn.textContent;
+    try {
+      const r = await fetch(mdUrl); if (!r.ok) throw new Error('fetch');
+      await navigator.clipboard.writeText(await r.text());
+      btn.textContent = 'Copied ✓'; btn.classList.add('ok');
+    } catch (e) {
+      window.open(mdUrl, '_blank');           // file:// or clipboard blocked → just open it
+      btn.textContent = 'Opened raw ↗';
+    }
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 2200);
+  });
+})();

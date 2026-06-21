@@ -49,6 +49,19 @@
     font-style:italic; max-width:680px; margin:0 0 18px; }
   .byline { font-family:var(--sans); font-size:12px; text-transform:uppercase;
     letter-spacing:.08em; color:var(--faint); margin:0; }
+
+  /* machine-readable companion CTA */
+  .md-cta { position:absolute; top:48px; right:0; display:flex; align-items:center; gap:14px;
+    font-family:var(--sans); }
+  @media (max-width:920px){ .md-cta { position:static; margin-top:18px; } }
+  .md-btn { font:700 11px/1 var(--sans); letter-spacing:.07em; text-transform:uppercase;
+    color:var(--text); background:var(--bg); border:1px solid var(--rule); border-radius:6px;
+    padding:9px 13px; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
+  .md-btn:hover { background:var(--rule); color:var(--bg); }
+  .md-btn.ok { background:var(--refuse); border-color:var(--refuse); color:#fff; }
+  .md-raw { font:700 11px/1 var(--sans); letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted); text-decoration:none; white-space:nowrap; }
+  .md-raw:hover { color:var(--text); }
   .sub { color:var(--muted); font-size:15px; max-width:880px; }
   .sub #count { color:var(--faint); }
 
@@ -471,6 +484,10 @@
   <p class="eyebrow">An informal AI-safety experiment</p>
   <h1>Contextual Compliance</h1>
   <p class="byline">Frederico Luz · June 2026 · Reading time — 10 minutes</p>
+  <div class="md-cta">
+    <button id="copy-md" type="button" class="md-btn" title="Copy a plain-text version of this write-up to paste into a chatbot">Copy as Markdown</button>
+    <a class="md-raw" id="raw-md" href="index.md" target="_blank" rel="noopener">feed to an LLM ↗</a>
+  </div>
 </header>
 
 <!-- SEG1 · the lede (full-width centered moment) -->
@@ -1278,6 +1295,28 @@ function renderReactions(){
 }
 
 familyChart(); render(); renderSeg5(); renderFakeLogs(); render2x2Matrix(); renderReactions(); commit(); renderAllRuns();
+
+// ---------- machine-readable companion: copy/open the sibling index.md ----------
+(function(){
+  const btn = document.getElementById('copy-md'), raw = document.getElementById('raw-md');
+  if (!btn) return;
+  // resolve index.md next to this page whether served as …/v0 or …/v0/
+  const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
+  const mdUrl = base + 'index.md';
+  if (raw) raw.href = mdUrl;
+  btn.addEventListener('click', async () => {
+    const orig = btn.textContent;
+    try {
+      const r = await fetch(mdUrl); if (!r.ok) throw new Error('fetch');
+      await navigator.clipboard.writeText(await r.text());
+      btn.textContent = 'Copied ✓'; btn.classList.add('ok');
+    } catch (e) {
+      window.open(mdUrl, '_blank');           // file:// or clipboard blocked → just open it
+      btn.textContent = 'Opened raw ↗';
+    }
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 2200);
+  });
+})();
 
 </script>
 </body>

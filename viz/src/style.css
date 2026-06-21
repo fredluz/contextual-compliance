@@ -42,6 +42,19 @@
     font-style:italic; max-width:680px; margin:0 0 18px; }
   .byline { font-family:var(--sans); font-size:12px; text-transform:uppercase;
     letter-spacing:.08em; color:var(--faint); margin:0; }
+
+  /* machine-readable companion CTA */
+  .md-cta { position:absolute; top:48px; right:0; display:flex; align-items:center; gap:14px;
+    font-family:var(--sans); }
+  @media (max-width:920px){ .md-cta { position:static; margin-top:18px; } }
+  .md-btn { font:700 11px/1 var(--sans); letter-spacing:.07em; text-transform:uppercase;
+    color:var(--text); background:var(--bg); border:1px solid var(--rule); border-radius:6px;
+    padding:9px 13px; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
+  .md-btn:hover { background:var(--rule); color:var(--bg); }
+  .md-btn.ok { background:var(--refuse); border-color:var(--refuse); color:#fff; }
+  .md-raw { font:700 11px/1 var(--sans); letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted); text-decoration:none; white-space:nowrap; }
+  .md-raw:hover { color:var(--text); }
   .sub { color:var(--muted); font-size:15px; max-width:880px; }
   .sub #count { color:var(--faint); }
 
