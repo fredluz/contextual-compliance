@@ -276,7 +276,8 @@ def text_figures(rows):
     return {
         'seg5-tasks': (_fence('Direct prompt — task message', d.get('user'))
                        + '\n\n' + _fence('Analyst framing — task message', n.get('user'))),
-        'seg5-persona': _fence('Analyst persona — system prompt', n.get('system')),
+        'seg5-persona': (_fence('Analyst persona — system prompt', n.get('system'))
+                         + '\n\n' + _fence('queries/Q-001.json — the actual payload', n.get('payload'))),
         'fake-logs': _fence('Fabricated "operational history", injected verbatim', coop),
     }
 # containers that are not part of the readable write-up
