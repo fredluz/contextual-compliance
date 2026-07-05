@@ -15,3 +15,6 @@ archive/frankfurt-v1/workspaces/
 archive/argus-fbi/
 # one-off viz backups
 viz/index.backup-*.html
+
+# python build artifacts
+viz/__pycache__/

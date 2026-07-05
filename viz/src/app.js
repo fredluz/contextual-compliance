@@ -200,8 +200,7 @@ function render(){
     }).join('');
     const d = framingDelta(m);
     const dCol = d==null ? 'var(--muted)' : Math.abs(d)<0.01 ? 'var(--muted)' : d>0 ? 'var(--aware)' : 'var(--west)';
-    const org=ORIGIN(m);
-    return `<tr><td class="model-name">${shortName(m)}<small>${m.split(/[\/:]/)[0]} · <span class="org ${org}">${org}</span></small></td>${cells}<td class="rate" style="color:${dCol}">${framingDeltaText(d)}</td></tr>`;
+    return `<tr><td class="model-name">${shortName(m)}<small>${m.split(/[\/:]/)[0]}</small></td>${cells}<td class="rate" style="color:${dCol}">${framingDeltaText(d)}</td></tr>`;
   }).join('');
 
 }

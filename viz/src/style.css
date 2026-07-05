@@ -1,4 +1,4 @@
-  :root {
+:root {
     --bg:#ffffff;
     --surface:#f5f5f4;     /* neutral light panel / hover */
     --bone:#f1ead8;        /* off-spine aside background (bone) */
@@ -468,4 +468,104 @@
     .pair { grid-template-columns:1fr; row-gap:14px; padding:18px 0; }
     .fig { padding-top:0; }
     .aside-bone { margin-left:-36px; margin-right:-36px; }
+  }
+
+  /* ============================================================
+     PHONE — responsive pass (≤620 / ≤430)
+     Goals: no horizontal page scroll, readable type, dense data
+     tables become deliberately swipeable instead of bursting the
+     layout. Desktop design above is untouched.
+     ============================================================ */
+  @media (max-width:620px){
+    html, body { overflow-x:hidden; }            /* belt-and-braces against stray bleed */
+    body { padding:0 16px 56px; font-size:14.5px; }
+
+    /* masthead */
+    header { padding:30px 0 18px; }
+    h1 { font-size:31px; line-height:1.08; }
+    .dek { font-size:17px; }
+    .byline { font-size:10.5px; }
+    .md-cta { flex-wrap:wrap; gap:10px; }
+
+    /* lede + section headings */
+    .standfirst { font-size:17px; }
+    .standfirst .hook { font-size:21px; }
+    .sec-h, .fig-h { font-size:21px; }
+    h1, .sec-h, .fig-h, .trick-model, .react-name { overflow-wrap:anywhere; }
+    .band, section.block { padding:26px 0; }
+    .moment { margin:26px auto; }
+
+    /* editorial prose a notch smaller for line-length on narrow screens */
+    .essay, .climax, .pair > .txt, .aside-inner,
+    .future-card-body, .standfirst p { font-size:16px; line-height:1.65; }
+    .essay .pullquote { font-size:15px; }
+    /* centered native popovers (#pop-wording, #pop-interview): cap height
+       and scroll, or a tall popover clips its top/bottom off-screen */
+    .prose-popover { font-size:15px; line-height:1.62; padding:22px 20px 20px;
+      width:min(560px,94vw); max-height:90svh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .prose-popover-wide { width:min(560px,94vw); }
+    .prose-pop-close { top:10px; right:12px; }
+    .prose-pop-trigger { font-size:16px; }
+
+    /* --- wide data tables → horizontal swipe ---
+       Scroll ONLY the table (.tscroll / #special), never the band —
+       otherwise the section heading scrolls off-screen too. The model
+       column is pinned so you never lose the row label mid-swipe. */
+    .tscroll, #special { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .tscroll table, #special table { min-width:480px; margin:0; }
+    th.model-col { min-width:122px; }
+    .tscroll th.model-col, .tscroll td.model-name,
+    #special th.model-col, #special td.model-name {
+      position:sticky; left:0; z-index:2; background:var(--bg);
+      box-shadow:1px 0 0 var(--border); }
+    thead th { font-size:10px; }
+    thead th small { font-size:9.5px; }
+    td.model-name { font-size:13px; white-space:normal; }
+    td.model-name small { font-size:10.5px; }
+    th, td { padding:6px 6px; }
+    .chip { width:22px; height:22px; font-size:11px; }
+    td.rate { font-size:11px; }
+
+    /* commitment dumbbell — tighten the label rail, shrink axis text */
+    .dumb-row { grid-template-columns:100px 1fr; }
+    .dumb-label { font-size:12.5px; }
+    .dumb-label small { font-size:9.5px; }
+    .dumb-axis span { font-size:9px; }
+    .dumb-legend { font-size:11px; gap:12px; }
+    .armbtns { font-size:11.5px; }
+
+    /* persona×wording matrix: stack the 3 model cards vertically instead
+       of overflowing the popover's right edge */
+    .matrix { flex-direction:column; flex-wrap:nowrap; align-items:flex-start;
+      gap:24px; overflow-x:visible; }
+    .mx-card { width:100%; }
+    .mx-cell { width:60px; min-height:38px; }
+    .mx-cell .chip { width:16px; height:16px; }
+
+    /* pooled-interview table */
+    .mtab th, .mtab td { padding:7px 7px; }
+
+    /* family comparison blocks */
+    .family-block { min-width:0; }
+    .family-row-label small { font-size:11px; }
+
+    /* drawer goes full-bleed on phone */
+    #drawer { width:100%; max-width:100%; }
+    .meta { grid-template-columns:1fr; gap:3px 0; }
+    .meta b { margin-top:8px; }
+
+    /* prompt anatomy + trick cards already stack via their own queries */
+    .trick-card { padding:14px 15px; }
+    .fakelogs { font-size:11px; }
+  }
+
+  @media (max-width:430px){
+    body { padding:0 13px 48px; }
+    h1 { font-size:27px; }
+    .standfirst .hook { font-size:19px; }
+    .sec-h, .fig-h { font-size:19px; }
+    .dumb-row { grid-template-columns:82px 1fr; }
+    .dumb-axis span { font-size:8.5px; }
+    .chip { width:20px; height:20px; font-size:10px; }
+    .tscroll table, #special table { min-width:440px; }
   }

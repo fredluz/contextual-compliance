@@ -310,6 +310,7 @@ class _ProseToMarkdown(HTMLParser):
         elif 'kicker' in cls:          md = f'## {text}'
         elif tag == 'h3':              md = f'### {text}'
         elif tag == 'summary':         md = f'**{text}**'
+        elif tag == 'li':              md = f'- {text}'
         elif 'open-q' in cls or 'pullquote' in cls or tag == 'blockquote':
                                        md = f'> {text}'
         elif 'hook' in cls or tag == 'em':
@@ -348,7 +349,7 @@ class _ProseToMarkdown(HTMLParser):
             self._flush()
             self.block = (tag, cls)
             return
-        if tag in ('p', 'h1', 'h3', 'summary', 'blockquote'):
+        if tag in ('p', 'h1', 'h3', 'summary', 'blockquote', 'li'):
             self._flush()
             self.block = (tag, cls)
             return
@@ -366,7 +367,7 @@ class _ProseToMarkdown(HTMLParser):
         if self.skip:
             self.skip -= 1
             return
-        if tag in ('p', 'h1', 'h3', 'summary', 'blockquote'):
+        if tag in ('p', 'h1', 'h3', 'summary', 'blockquote', 'li'):
             self._flush()
         elif tag == 'em' and self.block is not None and self.block[0] == 'em':
             self._flush()                     # close standalone hook line
