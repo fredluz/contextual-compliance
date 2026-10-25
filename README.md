@@ -19,7 +19,6 @@ The task is a surveillance one: an agent with real filesystem tools is asked to 
 | `results/analysis/` | Scored summaries and deep-read notes per model family |
 | `results/followups/` | Interview follow-up prompts |
 | `viz/` | Source and build script for the interactive write-up (`build.py`), plus its dataset (`data.json`) |
-| `archive/` | Notes on the first (Frankfurt v1) scenario |
 
 Raw per-run transcripts and generated workspaces are not included; they are large and regenerable (`bun run generate:realistic`).
 
