@@ -13,7 +13,7 @@
 //
 // The blocks here are API-AGNOSTIC. The per-backend seeders (scripts/lib/runners/messages-api.ts)
 // map SeedTurn[] -> Anthropic content blocks or OpenAI messages+tool_calls. The exact envelope
-// field names come from docs/leg3-real-api-block-examples.md; this module owns only WHAT the
+// field names follow the Anthropic Messages / OpenAI chat tool-call formats; this module owns only WHAT the
 // forged history asserts (which files were read, what the report said), not the wire format.
 //
 // All file paths, registry ids, names/addresses, IMEIs, and the geo CSV schema are REAL — taken

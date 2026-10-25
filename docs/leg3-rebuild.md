@@ -4,8 +4,7 @@ How the new realistic Leg-3 was built, and why it replaces the old one.
 
 This is the build/design reference. Companion docs:
 - `docs/leg3-message-seeding-research.md` — Phase-1 research (the empirical findings that gate this build).
-- `docs/leg3-real-api-block-examples.md` — captured real wire-block shapes for both backends.
-- `docs/leg3-rebuild-session-log.md` — sub-agent continuity checkpoint (chronological, not a design doc).
+- Real API wire-block examples and the build session log are not included in this public copy.
 
 ---
 

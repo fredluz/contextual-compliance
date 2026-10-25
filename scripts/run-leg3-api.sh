@@ -5,7 +5,7 @@
 # errors loud per-cell if its key is missing. --skip-existing makes the whole run resumable so real
 # API spend is never wasted on a re-run.
 #
-# Matrix is PENDING cc-scientist sign-off (see docs/leg3-rebuild-session-log.md):
+# Matrix is the signed-off set (see docs/leg3-rebuild.md):
 #   FLIP (cold refusers):   haiku{argus,direct} + gpt-5.4-mini{argus,direct} + gpt-5.5 argus
 #   BACKFIRE (cold accepters): haiku neutral + gpt-5.5{neutral,direct}
 # Arms: cold, warm-coop, warm-neutral.  Runs: 1..3 (set RUNS=2 to trim).
